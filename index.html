@@ -457,6 +457,52 @@
   .status-option.s-indent.selected   { border-color: var(--orange, #f97316); background: rgba(249,115,22,0.08); color: #f97316; }
   .status-option.s-dc.selected       { border-color: var(--accent2); background: rgba(124,92,252,0.08); color: var(--accent2); }
   .status-option.s-other.selected    { border-color: var(--text2); background: rgba(100,116,139,0.08); color: var(--text2); }
+
+  /* ── JALUR PENGIRIMAN ──────────────────────────────────────────────── */
+  .jalur-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 0 10px;
+  }
+  .jalur-title { font-size: 15px; font-weight: 700; color: var(--text); }
+  .jalur-sub   { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .jalur-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+  }
+  .jalur-row { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 6px; }
+  .jalur-field { font-size: 11px; color: var(--text3); }
+  .jalur-value { font-size: 13px; font-weight: 600; color: var(--text); }
+  .jalur-address { font-size: 11px; color: var(--text2); margin-top: 4px; line-height: 1.5; }
+  .jalur-noreceive {
+    font-family: monospace; font-size: 11px; font-weight: 700;
+    color: var(--accent); background: rgba(79,142,247,0.08);
+    padding: 2px 8px; border-radius: 4px; display: inline-block;
+  }
+  .jalur-search-input {
+    width: 100%; padding: 11px 14px;
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 10px; font-size: 14px; font-family: var(--sans);
+    color: var(--text); outline: none; margin-bottom: 12px;
+    transition: border-color 0.2s;
+  }
+  .jalur-search-input:focus { border-color: var(--accent); }
+  .jalur-empty { text-align: center; padding: 48px 20px; color: var(--text3); font-size: 13px; }
+  .jalur-loading { text-align: center; padding: 48px 20px; color: var(--text2);
+    font-size: 13px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .jalur-summary-bar {
+    display: flex; gap: 10px; margin-bottom: 12px;
+  }
+  .jalur-stat {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 12px; text-align: center;
+    box-shadow: var(--shadow);
+  }
+  .jalur-stat-val { font-size: 22px; font-weight: 700; color: var(--accent); }
+  .jalur-stat-lbl { font-size: 10px; color: var(--text3); margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -477,6 +523,7 @@
   <button class="tab-btn active" onclick="switchTab('fp')">⏳ Fulfillment</button>
   <button class="tab-btn" onclick="switchTab('xpdc')">🚚 XPDC</button>
   <button class="tab-btn" onclick="switchTab('rthub')">🏭 RT HUB</button>
+  <button class="tab-btn" onclick="switchTab('jalur')">🗺 Jalur</button>
   <!-- tab Setting disembunyikan — URL sudah dikonfigurasi oleh admin -->
 </div>
 
@@ -675,6 +722,26 @@
         <input class="form-input" id="m-cfg-fp" type="text" value="Fulfillment Pending" placeholder="Fulfillment Pending">
       </div>
       <button class="btn-submit" onclick="saveConfigMobile()">💾 Simpan</button>
+    </div>
+  </div>
+
+  <!-- JALUR PENGIRIMAN TAB -->
+  <div id="tab-jalur" class="tab-content">
+    <div class="jalur-header">
+      <div>
+        <div class="jalur-title">🗺 Jalur Pengiriman</div>
+        <div class="jalur-sub" id="jalur-m-sub">Memuat data hari ini...</div>
+      </div>
+      <button class="fp-refresh-btn" onclick="loadJalurMobile()" id="jalur-m-refresh">↻</button>
+    </div>
+    <input class="jalur-search-input" id="jalur-m-search" type="text"
+      placeholder="🔍 Cari nama, driver, no receive..." oninput="renderJalurMobile()">
+    <div id="jalur-m-summary" class="jalur-summary-bar"></div>
+    <div id="jalur-m-list">
+      <div class="jalur-loading">
+        <div class="fp-spinner"></div>
+        <div>Memuat jalur hari ini...</div>
+      </div>
     </div>
   </div>
 
@@ -1140,6 +1207,111 @@ function resetForm(prefix) {
   });
   form.querySelectorAll('.status-option').forEach(el => el.classList.remove('selected'));
   document.getElementById(`${prefix}-status-val`).value = '';
+}
+
+// ─── JALUR PENGIRIMAN MOBILE ─────────────────────────────────────────────────
+let JALUR_DATA    = [];
+let JALUR_HEADERS = [];
+
+async function loadJalurMobile() {
+  const listEl = document.getElementById('jalur-m-list');
+  document.getElementById('jalur-m-summary').innerHTML = '';
+  listEl.innerHTML = '<div class="jalur-loading"><div class="fp-spinner"></div><div>Memuat jalur hari ini...</div></div>';
+
+  try {
+    const data = await apiFetch('jalur', {});
+    if (!data.rows || data.rows.length === 0) {
+      listEl.innerHTML = '<div class="jalur-empty">🗺 Tidak ada data jalur hari ini yang sesuai filter Magelang/UBM</div>';
+      document.getElementById('jalur-m-sub').textContent = 'Tidak ada data hari ini';
+      return;
+    }
+
+    JALUR_HEADERS = data.rows[0].map(h => String(h));
+    JALUR_DATA    = data.rows.slice(1).map(r => {
+      const obj = {};
+      JALUR_HEADERS.forEach((h, i) => { obj[h] = String(r[i] || '').trim(); });
+      return obj;
+    });
+
+    // Cari tanggal hari ini WIB
+    const wib = new Date(new Date().getTime() + 7*60*60*1000);
+    document.getElementById('jalur-m-sub').textContent =
+      `Tanggal ${wib.getUTCDate()} — ${JALUR_DATA.length} pengiriman`;
+
+    renderJalurMobile();
+  } catch(e) {
+    listEl.innerHTML = `<div class="jalur-empty">⚠️ ${esc(e.message)}</div>`;
+    document.getElementById('jalur-m-sub').textContent = 'Gagal memuat data';
+  }
+}
+
+function renderJalurMobile() {
+  const search  = document.getElementById('jalur-m-search').value.toLowerCase();
+  const listEl  = document.getElementById('jalur-m-list');
+  const sumEl   = document.getElementById('jalur-m-summary');
+
+  // Cari key kolom penting
+  const keyNoReceive = JALUR_HEADERS.find(h => h.toUpperCase().includes('NO RECEIVE')) || '';
+  const keyNameShip  = JALUR_HEADERS.find(h => h.toUpperCase().includes('NAME SHIP'))  || '';
+  const keyAddress   = JALUR_HEADERS.find(h => h.toUpperCase().includes('ADRESS') || h.toUpperCase().includes('ADDRESS')) || '';
+  const keyDriver    = JALUR_HEADERS.find(h => h.toUpperCase() === 'DRIVER') || '';
+  const keyArmada    = JALUR_HEADERS.find(h => h.toUpperCase() === 'ARMADA') || '';
+  const keyQty       = JALUR_HEADERS.find(h => h.toUpperCase() === 'QTY')    || '';
+  const keyDC        = JALUR_HEADERS.find(h => h.toUpperCase().includes('DC') && !h.toUpperCase().includes('ADRESS')) || '';
+  const keyNoLC      = JALUR_HEADERS.find(h => h.toUpperCase().includes('NO LC')) || '';
+  const keyReqDate   = JALUR_HEADERS.find(h => h.toUpperCase().includes('REQ DATE')) || '';
+  const keyReason    = JALUR_HEADERS.find(h => h.toUpperCase() === 'REASON') || '';
+
+  let filtered = JALUR_DATA;
+  if (search) {
+    filtered = filtered.filter(r =>
+      Object.values(r).join(' ').toLowerCase().includes(search)
+    );
+  }
+
+  // Summary bar
+  const totalQty = filtered.reduce((s, r) => s + (parseInt(r[keyQty]) || 0), 0);
+  sumEl.innerHTML = `
+    <div class="jalur-stat"><div class="jalur-stat-val">${filtered.length}</div><div class="jalur-stat-lbl">Pengiriman</div></div>
+    <div class="jalur-stat"><div class="jalur-stat-val">${totalQty}</div><div class="jalur-stat-lbl">Total QTY</div></div>
+  `;
+
+  if (!filtered.length) {
+    listEl.innerHTML = '<div class="jalur-empty">Tidak ada data sesuai pencarian</div>';
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(r => `
+    <div class="jalur-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
+        <div>
+          <span class="jalur-noreceive">${esc(r[keyNoReceive] || '—')}</span>
+          <span style="font-size:10px;color:var(--text3);margin-left:6px">${esc(r[keyNoLC] || '')}</span>
+        </div>
+        ${r[keyDC] ? `<span style="font-size:10px;background:rgba(124,92,252,0.1);color:var(--accent2);padding:2px 8px;border-radius:4px;white-space:nowrap">${esc(r[keyDC])}</span>` : ''}
+      </div>
+      <div class="jalur-value">${esc(r[keyNameShip] || '—')}</div>
+      ${r[keyAddress] ? `<div class="jalur-address">📍 ${esc(r[keyAddress])}</div>` : ''}
+      <div class="jalur-row" style="margin-top:8px">
+        ${r[keyDriver]  ? `<div><div class="jalur-field">Driver</div><div class="jalur-value" style="font-size:12px">${esc(r[keyDriver])}</div></div>` : ''}
+        ${r[keyArmada]  ? `<div><div class="jalur-field">Armada</div><div class="jalur-value" style="font-size:12px">${esc(r[keyArmada])}</div></div>` : ''}
+        ${r[keyQty]     ? `<div><div class="jalur-field">QTY</div><div class="jalur-value" style="font-size:12px">${esc(r[keyQty])}</div></div>` : ''}
+        ${r[keyReqDate] ? `<div><div class="jalur-field">Req Date</div><div class="jalur-value" style="font-size:12px">${esc(r[keyReqDate])}</div></div>` : ''}
+      </div>
+      ${r[keyReason] ? `<div style="margin-top:6px;font-size:11px;color:var(--orange,#f97316);background:rgba(249,115,22,0.08);padding:4px 8px;border-radius:6px">⚠ ${esc(r[keyReason])}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+// Auto-load jalur saat tab dibuka
+const _origSwitchTab = typeof switchTab === 'function' ? switchTab : null;
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  // Load jalur otomatis saat pertama dibuka
+  if (name === 'jalur' && JALUR_DATA.length === 0) loadJalurMobile();
 }
 </script>
 </body>
