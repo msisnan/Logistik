@@ -793,14 +793,29 @@ function checkURL() {
   if (!CFG.url) throw new Error('URL Apps Script belum diisi.\nBuka tab ⚙ Setting dan isi URL terlebih dahulu.');
 }
 
-async function apiFetch(action, params) {
+// XHR GET — sama seperti XHR POST, bypass CORS preflight dari GitHub Pages
+function apiFetch(action, params) {
   checkURL();
-  const qs  = Object.entries(params).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-  const url  = `${CFG.url}?action=${action}&${qs}`;
-  const resp = await fetch(url, { redirect: 'follow' });
-  const text = await resp.text();
-  if (text.trim().startsWith('<')) throw new Error('Server mengembalikan HTML. Pastikan Apps Script sudah di-deploy ulang (Redeploy → New Version) dengan akses "Anyone".');
-  return JSON.parse(text);
+  return new Promise((resolve, reject) => {
+    const qs  = Object.entries(params).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+    const url = `${CFG.url}?action=${action}${qs ? '&'+qs : ''}`;
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.timeout = 30000;
+    xhr.onload = function() {
+      try {
+        const text = xhr.responseText;
+        if (text.trim().startsWith('<')) {
+          reject(new Error('Server mengembalikan HTML. Pastikan Apps Script sudah Redeploy dengan akses "Anyone".'));
+        } else {
+          resolve(JSON.parse(text));
+        }
+      } catch(e) { reject(new Error('Parse error: ' + xhr.responseText.slice(0,100))); }
+    };
+    xhr.onerror   = () => reject(new Error('Koneksi gagal. Periksa koneksi internet.'));
+    xhr.ontimeout = () => reject(new Error('Timeout — Apps Script tidak merespons dalam 30 detik.'));
+    xhr.send();
+  });
 }
 
 function apiPost(body) {
@@ -1221,7 +1236,8 @@ async function loadJalurMobile() {
   try {
     // Biarkan server yang hitung H+1 — tidak perlu kirim tanggal dari client
     const data = await apiFetch('jalur', {});
-    if (!data.rows || data.rows.length === 0) {
+    // rows[0] = headers, rows[1+] = data — jika hanya 1 baris = hanya header = tidak ada data
+    if (!data.rows || data.rows.length <= 1) {
       listEl.innerHTML = '<div class="jalur-empty">🗺 Tidak ada data jalur hari ini yang sesuai filter Magelang/UBM</div>';
       document.getElementById('jalur-m-sub').textContent = 'Tidak ada data hari ini';
       return;
@@ -1234,10 +1250,11 @@ async function loadJalurMobile() {
       return obj;
     });
 
-    // Cari tanggal hari ini WIB
+    // Hitung H+1 untuk label
     const wib = new Date(new Date().getTime() + 7*60*60*1000);
+    const tanggalH1 = String(wib.getUTCDate() + 1);
     document.getElementById('jalur-m-sub').textContent =
-      `Jalur besok (tgl ${tanggalH1}) — ${JALUR_DATA.length} pengiriman`;
+      `Jalur tgl ${tanggalH1} — ${JALUR_DATA.length} pengiriman`;
 
     renderJalurMobile();
   } catch(e) {
