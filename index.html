@@ -736,17 +736,29 @@ async function apiFetch(action, params) {
   return JSON.parse(text);
 }
 
-async function apiPost(body) {
+function apiPost(body) {
   checkURL();
-  const resp = await fetch(CFG.url, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify(body),
-    redirect: 'follow'
+  return new Promise((resolve, reject) => {
+    // Gunakan XMLHttpRequest dengan Content-Type text/plain
+    // untuk bypass CORS preflight — Apps Script menerima format ini
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', CFG.url, true);
+    xhr.setRequestHeader('Content-Type', 'text/plain');
+    xhr.timeout = 30000;
+    xhr.onload = function() {
+      try {
+        const text = xhr.responseText;
+        if (text.trim().startsWith('<')) {
+          reject(new Error('Server mengembalikan HTML. Coba Redeploy Apps Script.'));
+        } else {
+          resolve(JSON.parse(text));
+        }
+      } catch(e) { reject(new Error('Parse error: ' + xhr.responseText.slice(0,100))); }
+    };
+    xhr.onerror   = () => reject(new Error('Koneksi gagal. Periksa koneksi internet.'));
+    xhr.ontimeout = () => reject(new Error('Timeout — Apps Script tidak merespons.'));
+    xhr.send(JSON.stringify(body));
   });
-  const text = await resp.text();
-  if (text.trim().startsWith('<')) throw new Error('Server error. Coba Redeploy Apps Script.');
-  return JSON.parse(text);
 }
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
@@ -830,7 +842,7 @@ async function loadFPData() {
     // Ini dipakai untuk update cell yang tepat saat submit feedback
     FP_DATA = data.rows
       .map(r => ({
-        rowIndex:    r[r.length - 1],              // actual sheet row number dari server
+        rowIndex:    r[r.length - 1],
         receipt:     String(r[0] || '').trim(),
         customer:    String(r[1] || '').trim(),
         requestDate: parseDate(r[2]),
@@ -839,9 +851,9 @@ async function loadFPData() {
         booking:     String(r[5] || '').trim(),
         status:      String(r[6] || '').trim(),
         feedback:    String(r[7] || '').trim(),
-        remark:      String(r[9] || '').trim()     // kolom J (index 9)
+        remark:      String(r[9] || '').trim()
       }))
-      .filter(r => r.receipt); // simpan semua, filter saat render
+      .filter(r => r.receipt);
 
     renderPICList();
   } catch(e) {
@@ -902,7 +914,7 @@ function renderPICList() {
   listEl.innerHTML = names.map(name => {
     const items     = groups[name];
     // Hanya hitung yang statusnya bukan Sudah Diterima Cust
-    const aktif     = items.filter(r => (r.status || '').trim() !== 'Sudah Diterima Cust');
+    const aktif     = items.filter(r => (r.feedback || '').trim() !== 'Sudah Diterima Cust');
     const pending   = aktif.filter(r => !r.feedback).length;
     if (!aktif.length) return ''; // semua sudah diterima, skip PIC ini
     return `<div class="pic-card" onclick="showReceiptList('${escQ(name)}')">
@@ -932,11 +944,10 @@ function showReceiptList(picName) {
   document.getElementById('fp-screen-receipt').style.display  = 'block';
   document.getElementById('fp-screen-feedback').style.display = 'none';
 
-  // Tampilkan hanya receipt yang statusnya bukan "Sudah Diterima Cust"
-  // Trim() penting karena kadang ada spasi tersembunyi dari spreadsheet
+  // Tampilkan hanya yang feedback (kolom H) bukan "Sudah Diterima Cust"
   const items = FP_DATA.filter(r =>
     (r.picSE || '(Tanpa PIC)').trim() === picName.trim() &&
-    (r.status || '').trim() !== 'Sudah Diterima Cust'
+    (r.feedback || '').trim() !== 'Sudah Diterima Cust'
   );
   const listEl = document.getElementById('fp-receipt-list');
 
