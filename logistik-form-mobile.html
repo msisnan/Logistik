@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Input Logistik</title>
+<!-- fonts: system stack, no external dependency -->
+<style>
+  :root {
+    --bg: #f4f6fb;
+    --surface: #ffffff;
+    --border: #e2e8f0;
+    --accent: #4f8ef7;
+    --accent2: #7c5cfc;
+    --green: #10b981;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --text: #1e2340;
+    --text2: #64748b;
+    --text3: #94a3b8;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    --radius: 14px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: var(--bg);
+    font-family: var(--sans);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 40px;
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    padding: 20px 20px 28px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 120px; height: 120px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 50%;
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -20px; left: 40px;
+    width: 80px; height: 80px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 50%;
+  }
+  .header-title {
+    font-size: 20px;
+    font-weight: 700;
+    position: relative;
+    z-index: 1;
+  }
+  .header-sub {
+    font-size: 13px;
+    opacity: 0.8;
+    margin-top: 4px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* TABS */
+  .tab-bar {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: var(--shadow);
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex: 1;
+    min-width: 100px;
+    padding: 14px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--sans);
+    color: var(--text2);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* CONTENT */
+  .content {
+    padding: 20px 16px;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 18px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  /* FORM ELEMENTS */
+  .form-group {
+    margin-bottom: 16px;
+  }
+  .form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    margin-bottom: 6px;
+    letter-spacing: 0.3px;
+  }
+  .form-label .required { color: var(--red); margin-left: 2px; }
+  .form-input {
+    width: 100%;
+    padding: 13px 14px;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: var(--sans);
+    color: var(--text);
+    outline: none;
+    transition: all 0.2s;
+    -webkit-appearance: none;
+  }
+  .form-input:focus {
+    border-color: var(--accent);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(79,142,247,0.1);
+  }
+  .form-input::placeholder { color: var(--text3); }
+  select.form-input { cursor: pointer; }
+  textarea.form-input { resize: vertical; min-height: 80px; }
+
+  /* STATUS SELECTOR */
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .status-option {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    color: var(--text2);
+    background: var(--bg);
+  }
+  .status-option:hover { border-color: var(--accent); }
+  .status-option.selected {
+    border-color: var(--accent);
+    background: rgba(79,142,247,0.08);
+    color: var(--accent);
+  }
+  .status-option.s-packing.selected { border-color: var(--yellow); background: rgba(245,158,11,0.08); color: var(--yellow); }
+  .status-option.s-siap.selected { border-color: var(--accent2); background: rgba(124,92,252,0.08); color: var(--accent2); }
+  .status-option.s-kirim.selected { border-color: var(--accent); background: rgba(79,142,247,0.08); color: var(--accent); }
+  .status-option.s-selesai.selected { border-color: var(--green); background: rgba(16,185,129,0.08); color: var(--green); }
+  .status-option.s-cancelled.selected { border-color: var(--red); background: rgba(239,68,68,0.08); color: var(--red); }
+
+  /* SUBMIT BTN */
+  .btn-submit {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    font-family: var(--sans);
+    cursor: pointer;
+    margin-top: 8px;
+    transition: opacity 0.2s, transform 0.1s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-submit:active { opacity: 0.85; transform: scale(0.98); }
+  .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  /* SUCCESS STATE */
+  .success-screen {
+    display: none;
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .success-screen.visible { display: block; }
+  .success-icon {
+    width: 72px; height: 72px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    margin: 0 auto 16px;
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  @keyframes popIn {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .success-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .success-sub { font-size: 13px; color: var(--text2); margin-bottom: 24px; }
+  .btn-back {
+    padding: 12px 24px;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: var(--sans);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-back:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* CONFIG SECTION */
+  .config-note {
+    background: rgba(79,142,247,0.06);
+    border: 1px solid rgba(79,142,247,0.2);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+
+  /* LOADING OVERLAY */
+  .loading-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 999;
+    align-items: center; justify-content: center;
+  }
+  .loading-overlay.visible { display: flex; }
+  .loading-spinner {
+    background: white;
+    border-radius: 16px;
+    padding: 28px 32px;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 13px; color: var(--text2); font-weight: 500; }
+
+  /* ── FULFILLMENT VIEW MODE ─────────────────────────────────────────── */
+  .fp-topbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 0 10px;
+  }
+  .fp-topbar-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    flex: 1;
+  }
+  .fp-back-btn {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 14px;
+    font-weight: 600;
+    font-family: var(--sans);
+    cursor: pointer;
+    padding: 4px 0;
+    white-space: nowrap;
+  }
+  .fp-refresh-btn {
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    color: var(--text2);
+    font-size: 16px;
+    width: 36px; height: 36px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .fp-refresh-btn:active { transform: rotate(180deg); }
+
+  /* PIC SE card */
+  .pic-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: var(--shadow);
+  }
+  .pic-card:active { transform: scale(0.98); border-color: var(--accent); }
+  .pic-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .pic-count {
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 3px;
+  }
+  .pic-arrow {
+    font-size: 18px;
+    color: var(--text3);
+  }
+  .pic-badge {
+    background: rgba(79,142,247,0.1);
+    color: var(--accent);
+    border-radius: 20px;
+    padding: 3px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: var(--sans);
+  }
+
+  /* Receipt card */
+  .receipt-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: var(--shadow);
+  }
+  .receipt-card:active { transform: scale(0.98); border-color: var(--accent); }
+  .receipt-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .receipt-code {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    font-family: monospace;
+  }
+  .receipt-customer {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-top: 2px;
+  }
+  .receipt-meta {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 4px;
+  }
+  .receipt-feedback-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .rfb-empty { background: rgba(148,163,184,0.12); color: var(--text3); }
+  .rfb-filled { background: rgba(16,185,129,0.1); color: var(--green); }
+
+  /* Feedback detail header */
+  .fp-receipt-header {
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .fp-receipt-code { font-size: 12px; font-weight: 700; color: var(--accent); font-family: monospace; }
+  .fp-receipt-customer { font-size: 16px; font-weight: 700; color: var(--text); margin-top: 2px; }
+  .fp-receipt-meta { font-size: 12px; color: var(--text2); margin-top: 4px; line-height: 1.6; }
+
+  /* Loading / error states */
+  .fp-loading-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text2);
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .fp-spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  .fp-error-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text2);
+    font-size: 13px;
+  }
+  .fp-empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text3);
+    font-size: 13px;
+  }
+
+  /* Feedback status options — extra colors */
+  .status-option.s-diterima.selected { border-color: var(--green); background: rgba(16,185,129,0.08); color: var(--green); }
+  .status-option.s-pindah.selected   { border-color: var(--yellow); background: rgba(245,158,11,0.08); color: var(--yellow); }
+  .status-option.s-indent.selected   { border-color: var(--orange, #f97316); background: rgba(249,115,22,0.08); color: #f97316; }
+  .status-option.s-dc.selected       { border-color: var(--accent2); background: rgba(124,92,252,0.08); color: var(--accent2); }
+  .status-option.s-other.selected    { border-color: var(--text2); background: rgba(100,116,139,0.08); color: var(--text2); }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner">
+    <div class="spinner"></div>
+    <div class="loading-text">Menyimpan data...</div>
+  </div>
+</div>
+
+<div class="header">
+  <div class="header-title">📦 Input Logistik</div>
+  <div class="header-sub">Form input untuk tim sales</div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('fp')">⏳ Fulfillment</button>
+  <button class="tab-btn" onclick="switchTab('xpdc')">🚚 XPDC</button>
+  <button class="tab-btn" onclick="switchTab('rthub')">🏭 RT HUB</button>
+  <!-- tab Setting disembunyikan — URL sudah dikonfigurasi oleh admin -->
+</div>
+
+<div class="content">
+
+  <!-- FULFILLMENT PENDING — VIEW & FEEDBACK MODE -->
+  <div id="tab-fp" class="tab-content active">
+
+    <!-- SCREEN 1: List PIC SE -->
+    <div id="fp-screen-pic">
+      <div class="fp-topbar">
+        <div class="fp-topbar-title">⏳ Fulfillment Pending</div>
+        <button class="fp-refresh-btn" onclick="loadFPData()" id="fp-refresh-btn">↻</button>
+      </div>
+      <div id="fp-pic-loading" class="fp-loading-state">
+        <div class="fp-spinner"></div>
+        <div>Memuat data...</div>
+      </div>
+      <div id="fp-pic-error" class="fp-error-state" style="display:none">
+        <div style="font-size:32px;margin-bottom:8px">⚠️</div>
+        <div id="fp-error-msg">Gagal memuat data</div>
+        <button class="btn-submit" style="margin-top:16px;width:auto;padding:10px 24px" onclick="loadFPData()">Coba Lagi</button>
+      </div>
+      <div id="fp-pic-list" style="display:none"></div>
+    </div>
+
+    <!-- SCREEN 2: List Receipt per PIC SE -->
+    <div id="fp-screen-receipt" style="display:none">
+      <div class="fp-topbar">
+        <button class="fp-back-btn" onclick="showPICScreen()">← Kembali</button>
+        <div class="fp-topbar-title" id="fp-pic-name-title"></div>
+      </div>
+      <div id="fp-receipt-list"></div>
+    </div>
+
+    <!-- SCREEN 3: Form Feedback -->
+    <div id="fp-screen-feedback" style="display:none">
+      <div class="fp-topbar">
+        <button class="fp-back-btn" onclick="showReceiptScreen()">← Kembali</button>
+        <div class="fp-topbar-title">Feedback</div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="fp-receipt-header">
+          <div class="fp-receipt-code" id="fb-receipt-code"></div>
+          <div class="fp-receipt-customer" id="fb-receipt-customer"></div>
+          <div class="fp-receipt-meta" id="fb-receipt-meta"></div>
+        </div>
+        <div style="margin-top:16px">
+          <div class="form-label" style="margin-bottom:10px">Feedback PIC SE <span class="required">*</span></div>
+          <div class="status-grid" id="fb-status-grid">
+            <div class="status-option s-diterima" onclick="selectFeedback('Sudah Diterima Cust', this)">✅ Sudah Diterima</div>
+            <div class="status-option s-pindah"   onclick="selectFeedback('Pindah Request Date', this)">📅 Pindah Date</div>
+            <div class="status-option s-indent"   onclick="selectFeedback('Indent', this)">⏸ Indent</div>
+            <div class="status-option s-dc"       onclick="selectFeedback('Fisik masih di DC', this)">🏠 Di DC</div>
+            <div class="status-option s-other"    onclick="selectFeedback('Other', this)">📌 Other</div>
+          </div>
+        </div>
+        <div id="fb-remark-group" style="display:none;margin-top:14px">
+          <label class="form-label">Remark <span class="required">*</span></label>
+          <textarea class="form-input" id="fb-remark" rows="3" placeholder="Tulis keterangan tambahan..."></textarea>
+        </div>
+        <button class="btn-submit" style="margin-top:16px" onclick="submitFeedback()" id="fb-submit-btn">
+          <span>💾</span> Simpan Feedback
+        </button>
+      </div>
+      <!-- Success inline -->
+      <div id="fb-success" style="display:none;text-align:center;padding:32px 16px">
+        <div class="success-icon" style="margin:0 auto 12px">✓</div>
+        <div class="success-title">Feedback Tersimpan!</div>
+        <div class="success-sub" id="fb-success-msg"></div>
+        <button class="btn-back" onclick="showReceiptScreen()">← Kembali ke List</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- XPDC FORM -->
+  <div id="tab-xpdc" class="tab-content">
+    <div id="form-xpdc" class="card">
+      <div class="card-title">🚚 Kirim Barang XPDC</div>
+
+      <div class="form-group">
+        <label class="form-label">Nomor Receipt <span class="required">*</span></label>
+        <input class="form-input" id="xpdc-receipt" type="text" placeholder="Contoh: XPDC-001">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nama Customer <span class="required">*</span></label>
+        <input class="form-input" id="xpdc-customer" type="text" placeholder="Nama perusahaan / customer">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tanggal Pengiriman <span class="required">*</span></label>
+        <input class="form-input" id="xpdc-tglkirim" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status <span class="required">*</span></label>
+        <div class="status-grid" id="xpdc-status-grid">
+          <div class="status-option" onclick="selectStatus('xpdc', 'Pending', this)">⏳ Pending</div>
+          <div class="status-option s-packing" onclick="selectStatus('xpdc', 'Packing', this)">📦 Packing</div>
+          <div class="status-option s-siap" onclick="selectStatus('xpdc', 'Siap Kirim', this)">✅ Siap Kirim</div>
+          <div class="status-option s-kirim" onclick="selectStatus('xpdc', 'Dalam Pengiriman', this)">🚚 Dalam Kirim</div>
+          <div class="status-option s-selesai" onclick="selectStatus('xpdc', 'Selesai', this)">🎉 Selesai</div>
+          <div class="status-option s-cancelled" onclick="selectStatus('xpdc', 'Cancelled', this)">✕ Cancelled</div>
+        </div>
+        <input type="hidden" id="xpdc-status-val">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Qty / Jumlah Koli</label>
+        <input class="form-input" id="xpdc-qty" type="number" min="1" placeholder="Jumlah koli/barang">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Note</label>
+        <textarea class="form-input" id="xpdc-note" placeholder="Catatan tambahan..."></textarea>
+      </div>
+      <button class="btn-submit" onclick="submitShip('xpdc')">
+        <span>💾</span> Simpan Data
+      </button>
+    </div>
+    <div id="success-xpdc" class="success-screen">
+      <div class="success-icon">✓</div>
+      <div class="success-title">Berhasil Tersimpan!</div>
+      <div class="success-sub">Data XPDC telah ditambahkan ke spreadsheet.</div>
+      <button class="btn-back" onclick="resetForm('xpdc')">+ Tambah Data Lagi</button>
+    </div>
+  </div>
+
+  <!-- RT HUB FORM -->
+  <div id="tab-rthub" class="tab-content">
+    <div id="form-rthub" class="card">
+      <div class="card-title">🏭 Kirim Barang RT HUB</div>
+
+      <div class="form-group">
+        <label class="form-label">Nomor Receipt <span class="required">*</span></label>
+        <input class="form-input" id="rthub-receipt" type="text" placeholder="Contoh: RT-001">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nama Customer <span class="required">*</span></label>
+        <input class="form-input" id="rthub-customer" type="text" placeholder="Nama perusahaan / customer">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tanggal Pengiriman <span class="required">*</span></label>
+        <input class="form-input" id="rthub-tglkirim" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status <span class="required">*</span></label>
+        <div class="status-grid" id="rthub-status-grid">
+          <div class="status-option" onclick="selectStatus('rthub', 'Pending', this)">⏳ Pending</div>
+          <div class="status-option s-packing" onclick="selectStatus('rthub', 'Packing', this)">📦 Packing</div>
+          <div class="status-option s-siap" onclick="selectStatus('rthub', 'Siap Kirim', this)">✅ Siap Kirim</div>
+          <div class="status-option s-kirim" onclick="selectStatus('rthub', 'Dalam Pengiriman', this)">🚚 Dalam Kirim</div>
+          <div class="status-option s-selesai" onclick="selectStatus('rthub', 'Selesai', this)">🎉 Selesai</div>
+          <div class="status-option s-cancelled" onclick="selectStatus('rthub', 'Cancelled', this)">✕ Cancelled</div>
+        </div>
+        <input type="hidden" id="rthub-status-val">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Qty / Jumlah Koli</label>
+        <input class="form-input" id="rthub-qty" type="number" min="1" placeholder="Jumlah koli/barang">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Note</label>
+        <textarea class="form-input" id="rthub-note" placeholder="Catatan tambahan..."></textarea>
+      </div>
+      <button class="btn-submit" onclick="submitShip('rthub')">
+        <span>💾</span> Simpan Data
+      </button>
+    </div>
+    <div id="success-rthub" class="success-screen">
+      <div class="success-icon">✓</div>
+      <div class="success-title">Berhasil Tersimpan!</div>
+      <div class="success-sub">Data RT HUB telah ditambahkan ke spreadsheet.</div>
+      <button class="btn-back" onclick="resetForm('rthub')">+ Tambah Data Lagi</button>
+    </div>
+  </div>
+
+  <!-- CONFIG TAB -->
+  <div id="tab-config" class="tab-content">
+    <div class="card">
+      <div class="card-title">⚙ Pengaturan</div>
+      <div class="config-note">
+        📋 Masukkan URL Apps Script yang sama dengan yang dipakai di dashboard desktop. Pengaturan disimpan di perangkat ini.
+      </div>
+      <div class="form-group">
+        <label class="form-label">URL Apps Script</label>
+        <input class="form-input" id="m-cfg-url" type="text" placeholder="https://script.google.com/macros/s/...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nama Sheet XPDC</label>
+        <input class="form-input" id="m-cfg-xpdc" type="text" value="Kirim XPDC" placeholder="Kirim XPDC">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nama Sheet RT HUB</label>
+        <input class="form-input" id="m-cfg-rthub" type="text" value="Kirim RT HUB" placeholder="Kirim RT HUB">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nama Sheet Fulfillment</label>
+        <input class="form-input" id="m-cfg-fp" type="text" value="Fulfillment Pending" placeholder="Fulfillment Pending">
+      </div>
+      <button class="btn-submit" onclick="saveConfigMobile()">💾 Simpan</button>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+// ── KONFIGURASI — isi URL Apps Script kamu di sini ──────────────────────────
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwmCUTBVtR8dnGvgqGhIWqlOnm8za2m1g6ioo846KBTt_xfPmoEkhUAclvG5M2MCjwNpA/exec';
+// ─────────────────────────────────────────────────────────────────────────────
+
+let CFG = {
+  url:   APPS_SCRIPT_URL,
+  xpdc:  'Kirim XPDC',
+  rthub: 'Kirim RT HUB',
+  fp:    'Fulfillment Pending'
+};
+
+// ─── STORAGE WRAPPER (localStorage + cookie fallback) ────────────────────────
+// Apps Script sandbox kadang memblokir localStorage, cookie sebagai fallback
+function storageSave(key, val) {
+  try { localStorage.setItem(key, val); return; } catch(e) {}
+  // Fallback: cookie (expires 30 hari)
+  const d = new Date(); d.setTime(d.getTime() + 30*24*60*60*1000);
+  document.cookie = encodeURIComponent(key) + '=' + encodeURIComponent(val) +
+    '; expires=' + d.toUTCString() + '; path=/; SameSite=None; Secure';
+}
+function storageGet(key) {
+  try {
+    const v = localStorage.getItem(key);
+    if (v !== null) return v;
+  } catch(e) {}
+  // Fallback: cookie
+  const name = encodeURIComponent(key) + '=';
+  const ca   = document.cookie.split(';');
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i].trim();
+    if (c.indexOf(name) === 0) return decodeURIComponent(c.substring(name.length));
+  }
+  return null;
+}
+
+// ─── API HELPERS ─────────────────────────────────────────────────────────────
+// Form ini dihost secara terpisah (bukan dari Apps Script).
+// Fetch ke Apps Script URL bekerja normal karena Apps Script return JSON
+// dengan Content-Type yang benar, dan browser tidak blokir cross-origin JSON GET.
+
+function checkURL() {
+  if (!CFG.url) throw new Error('URL Apps Script belum diisi.\nBuka tab ⚙ Setting dan isi URL terlebih dahulu.');
+}
+
+async function apiFetch(action, params) {
+  checkURL();
+  const qs  = Object.entries(params).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+  const url  = `${CFG.url}?action=${action}&${qs}`;
+  const resp = await fetch(url, { redirect: 'follow' });
+  const text = await resp.text();
+  if (text.trim().startsWith('<')) throw new Error('Server mengembalikan HTML. Pastikan Apps Script sudah di-deploy ulang (Redeploy → New Version) dengan akses "Anyone".');
+  return JSON.parse(text);
+}
+
+function apiPost(body) {
+  checkURL();
+  return new Promise((resolve, reject) => {
+    // Gunakan XMLHttpRequest dengan Content-Type text/plain
+    // untuk bypass CORS preflight — Apps Script menerima format ini
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', CFG.url, true);
+    xhr.setRequestHeader('Content-Type', 'text/plain');
+    xhr.timeout = 30000;
+    xhr.onload = function() {
+      try {
+        const text = xhr.responseText;
+        if (text.trim().startsWith('<')) {
+          reject(new Error('Server mengembalikan HTML. Coba Redeploy Apps Script.'));
+        } else {
+          resolve(JSON.parse(text));
+        }
+      } catch(e) { reject(new Error('Parse error: ' + xhr.responseText.slice(0,100))); }
+    };
+    xhr.onerror   = () => reject(new Error('Koneksi gagal. Periksa koneksi internet.'));
+    xhr.ontimeout = () => reject(new Error('Timeout — Apps Script tidak merespons.'));
+    xhr.send(JSON.stringify(body));
+  });
+}
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let FP_DATA        = [];   // semua rows dari sheet FP
+let CURRENT_PIC    = '';   // PIC SE yang sedang dibuka
+let CURRENT_ROW    = null; // row object yang sedang diberi feedback
+let CURRENT_FEEDBACK = ''; // nilai feedback yang dipilih
+
+window.onload = () => {
+  const s = storageGet('logistik_mobile_cfg');
+  if (s) { try { CFG = { ...CFG, ...JSON.parse(s) }; } catch(e){} }
+  document.getElementById('m-cfg-url').value   = CFG.url;
+  document.getElementById('m-cfg-xpdc').value  = CFG.xpdc;
+  document.getElementById('m-cfg-rthub').value = CFG.rthub;
+  document.getElementById('m-cfg-fp').value    = CFG.fp;
+
+  // Set today as default date untuk form XPDC & RT HUB
+  const today = new Date().toISOString().split('T')[0];
+  ['xpdc-tglkirim','rthub-tglkirim'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = today;
+  });
+
+  // Load FP data saat halaman dibuka
+  loadFPData();
+};
+
+function saveConfigMobile() {
+  CFG.url  = document.getElementById('m-cfg-url').value.trim();
+  CFG.xpdc = document.getElementById('m-cfg-xpdc').value.trim();
+  CFG.rthub= document.getElementById('m-cfg-rthub').value.trim();
+  CFG.fp   = document.getElementById('m-cfg-fp').value.trim();
+  storageSave('logistik_mobile_cfg', JSON.stringify(CFG));
+  alert('✅ Pengaturan tersimpan!');
+}
+
+// ─── TAB SWITCHING ────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+// ─── STATUS SELECT ────────────────────────────────────────────────────────────
+function selectStatus(prefix, val, el) {
+  const grid = document.getElementById(`${prefix}-status-grid`);
+  grid.querySelectorAll('.status-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById(`${prefix}-status-val`).value = val;
+  SELECTED[prefix] = val;
+}
+
+// ─── VALIDATION ───────────────────────────────────────────────────────────────
+function validate(fields) {
+  for (const [id, label] of fields) {
+    const el = document.getElementById(id);
+    if (!el || !el.value.trim()) {
+      el && el.focus();
+      alert(`⚠ ${label} wajib diisi`);
+      return false;
+    }
+  }
+  return true;
+}
+
+// ─── SUBMIT ───────────────────────────────────────────────────────────────────
+// ─── FULFILLMENT — LOAD & RENDER ─────────────────────────────────────────────
+async function loadFPData() {
+  if (!CFG.url) {
+    showFPError('URL Apps Script belum diisi. Silakan isi di tab ⚙ Setting.');
+    return;
+  }
+  showFPLoading();
+  try {
+    const data = await apiFetch('read', { sheet: CFG.fp, startRow: 3 });
+    // data.rows sudah difilter server-side (hanya baris dengan receipt)
+
+    // Map rows → objects, filter hanya yang bukan "Sudah Diterima Cust"
+    // Server menyisipkan actual sheet row number sebagai elemen terakhir array
+    // Ini dipakai untuk update cell yang tepat saat submit feedback
+    // Log raw rows untuk debug
+    if (data.rows.length > 0) {
+      console.log('[loadFPData] row length:', data.rows[0].length);
+      console.log('[loadFPData] row[0] sample:', JSON.stringify(data.rows[0]));
+      // Cari row yang ada feedback-nya
+      const withFb = data.rows.filter(r => r[7] && String(r[7]).trim());
+      if (withFb.length) console.log('[loadFPData] r[7] feedback sample:', JSON.stringify(withFb[0][7]));
+    }
+
+    FP_DATA = data.rows
+      .map(r => {
+        // rowIndex: server append di posisi terakhir (setelah semua kolom sheet)
+        // Sheet punya kolom A-N (14 kolom, index 0-13), rowIndex di index 14
+        const rowIdx = r[r.length - 1];
+        const feedback = String(r[7] || '').trim();
+        return {
+          rowIndex:    rowIdx,
+          receipt:     String(r[0] || '').trim(),
+          customer:    String(r[1] || '').trim(),
+          requestDate: parseDate(r[2]),
+          sla:         (r[3] !== '' && r[3] != null) ? String(r[3]) : '',
+          picSE:       String(r[4] || '').trim(),
+          booking:     String(r[5] || '').trim(),
+          status:      String(r[6] || '').trim(),
+          feedback:    feedback,
+          remark:      String(r[9] || '').trim()
+        };
+      })
+      .filter(r => r.receipt);
+    
+    console.log('[loadFPData] Total rows:', FP_DATA.length);
+    console.log('[loadFPData] With feedback:', FP_DATA.filter(r => r.feedback).length);
+    console.log('[loadFPData] Sudah Diterima:', FP_DATA.filter(r => r.feedback === 'Sudah Diterima Cust').length);
+
+    renderPICList();
+  } catch(e) {
+    showFPError('Gagal memuat data: ' + e.message);
+  }
+}
+
+function parseDate(val) {
+  if (!val) return '';
+  if (val instanceof Date) { val.setHours(val.getHours()+7); return val.toISOString().split('T')[0]; }
+  const s = String(val);
+  if (s.includes('T')) { const d = new Date(s); d.setHours(d.getHours()+7); return d.toISOString().split('T')[0]; }
+  return s.slice(0,10);
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  const parts = d.slice(0,10).split('-');
+  if (parts.length === 3) {
+    const dt = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    return dt.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
+  }
+  return d;
+}
+
+function showFPLoading() {
+  document.getElementById('fp-pic-loading').style.display = 'flex';
+  document.getElementById('fp-pic-error').style.display   = 'none';
+  document.getElementById('fp-pic-list').style.display    = 'none';
+}
+function showFPError(msg) {
+  document.getElementById('fp-pic-loading').style.display = 'none';
+  document.getElementById('fp-pic-error').style.display   = 'block';
+  document.getElementById('fp-error-msg').textContent     = msg;
+  document.getElementById('fp-pic-list').style.display    = 'none';
+}
+
+function renderPICList() {
+  document.getElementById('fp-pic-loading').style.display = 'none';
+  document.getElementById('fp-pic-error').style.display   = 'none';
+  const listEl = document.getElementById('fp-pic-list');
+  listEl.style.display = 'block';
+
+  // Group by PIC SE — dari SEMUA data
+  const groups = {};
+  FP_DATA.forEach(r => {
+    const key = r.picSE || '(Tanpa PIC)';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(r);
+  });
+
+  const names = Object.keys(groups).sort();
+  if (!names.length) {
+    listEl.innerHTML = '<div class="fp-empty-state">🎉 Semua order sudah diterima!</div>';
+    return;
+  }
+
+  listEl.innerHTML = names.map(name => {
+    const items     = groups[name];
+    // Hanya hitung yang statusnya bukan Sudah Diterima Cust
+    const aktif     = items.filter(r => (r.feedback || '').trim() !== 'Sudah Diterima Cust');
+    const pending   = aktif.filter(r => !r.feedback).length;
+    if (!aktif.length) return ''; // semua sudah diterima, skip PIC ini
+    return `<div class="pic-card" onclick="showReceiptList('${escQ(name)}')">
+      <div>
+        <div class="pic-name">${esc(name)}</div>
+        <div class="pic-count">${aktif.length} order aktif${pending ? ` &bull; <span style="color:var(--red)">${pending} belum difeedback</span>` : ' &bull; semua sudah difeedback'}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="pic-badge">${aktif.length}</span>
+        <span class="pic-arrow">›</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── SCREEN NAVIGATION ───────────────────────────────────────────────────────
+function showPICScreen() {
+  document.getElementById('fp-screen-pic').style.display      = 'block';
+  document.getElementById('fp-screen-receipt').style.display  = 'none';
+  document.getElementById('fp-screen-feedback').style.display = 'none';
+}
+
+function showReceiptList(picName) {
+  CURRENT_PIC = picName;
+  document.getElementById('fp-pic-name-title').textContent = picName;
+  document.getElementById('fp-screen-pic').style.display      = 'none';
+  document.getElementById('fp-screen-receipt').style.display  = 'block';
+  document.getElementById('fp-screen-feedback').style.display = 'none';
+
+  // Filter: tampilkan hanya yang feedback (kolom H) bukan "Sudah Diterima Cust"
+  const allForPIC = FP_DATA.filter(r => (r.picSE || '(Tanpa PIC)').trim() === picName.trim());
+  const items = allForPIC.filter(r => {
+    const fb = (r.feedback || '').trim();
+    return fb !== 'Sudah Diterima Cust';
+  });
+  // Debug: tampilkan di console untuk troubleshoot
+  console.log('[Screen2] PIC:', picName, '| Total:', allForPIC.length, '| Filtered:', items.length);
+  allForPIC.forEach(r => console.log('  receipt:', r.receipt, '| feedback:[' + r.feedback + '] len:', (r.feedback||'').length));
+  const listEl = document.getElementById('fp-receipt-list');
+
+  if (!items.length) {
+    listEl.innerHTML = '<div class="fp-empty-state">Tidak ada order untuk PIC ini.</div>';
+    return;
+  }
+
+  listEl.innerHTML = items.map(r => {
+    const hasFb = r.feedback;
+    return `<div class="receipt-card" onclick="showFeedbackForm(${r.rowIndex})">
+      <div class="receipt-card-top">
+        <div style="flex:1;min-width:0">
+          <div class="receipt-code">${esc(r.receipt)}</div>
+          <div class="receipt-customer">${esc(r.customer)}</div>
+          <div class="receipt-meta">
+            📅 ${fmtDate(r.requestDate)}
+            ${r.sla ? ` &bull; SLA ${r.sla} hr` : ''}
+            ${r.booking ? ` &bull; ${esc(r.booking)}` : ''}
+          </div>
+          ${r.status ? `<div class="receipt-meta" style="margin-top:2px">Status: <b>${esc(r.status)}</b></div>` : ''}
+        </div>
+        <div>
+          <span class="receipt-feedback-badge ${hasFb ? 'rfb-filled' : 'rfb-empty'}">
+            ${hasFb ? '✓ ' + esc(r.feedback) : 'Belum'}
+          </span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function showReceiptScreen() {
+  showReceiptList(CURRENT_PIC);
+}
+
+function showFeedbackForm(rowIndex) {
+  const row = FP_DATA.find(r => r.rowIndex === rowIndex);
+  if (!row) return;
+  CURRENT_ROW      = row;
+  CURRENT_FEEDBACK = '';
+
+  document.getElementById('fp-screen-receipt').style.display  = 'none';
+  document.getElementById('fp-screen-feedback').style.display = 'block';
+
+  document.getElementById('fb-receipt-code').textContent     = row.receipt;
+  document.getElementById('fb-receipt-customer').textContent = row.customer;
+  document.getElementById('fb-receipt-meta').innerHTML =
+    `📅 ${fmtDate(row.requestDate)}${row.sla ? ` &bull; SLA ${row.sla} hr` : ''}` +
+    `${row.booking ? `<br>📍 ${esc(row.booking)}` : ''}` +
+    `${row.status  ? `<br>Status: <b>${esc(row.status)}</b>` : ''}`;
+
+  // Reset form
+  document.querySelectorAll('#fb-status-grid .status-option').forEach(o => o.classList.remove('selected'));
+  document.getElementById('fb-remark-group').style.display = 'none';
+  document.getElementById('fb-remark').value = '';
+  document.getElementById('fb-success').style.display = 'none';
+  document.getElementById('fb-submit-btn').style.display = 'flex';
+  document.querySelector('#fp-screen-feedback .card').style.display = 'block';
+
+  // Pre-select existing feedback jika ada
+  if (row.feedback) {
+    const opts = document.querySelectorAll('#fb-status-grid .status-option');
+    opts.forEach(o => {
+      if (o.getAttribute('data-val') === row.feedback || o.textContent.includes(row.feedback)) {
+        // will be handled by selectFeedback if clicked
+      }
+    });
+  }
+}
+
+function selectFeedback(val, el) {
+  CURRENT_FEEDBACK = val;
+  document.querySelectorAll('#fb-status-grid .status-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  const remarkGroup = document.getElementById('fb-remark-group');
+  remarkGroup.style.display = val === 'Other' ? 'block' : 'none';
+  if (val !== 'Other') document.getElementById('fb-remark').value = '';
+}
+
+async function submitFeedback() {
+  if (!CURRENT_FEEDBACK) { alert('⚠ Pilih feedback terlebih dahulu'); return; }
+  if (CURRENT_FEEDBACK === 'Other' && !document.getElementById('fb-remark').value.trim()) {
+    alert('⚠ Remark wajib diisi jika memilih Other');
+    document.getElementById('fb-remark').focus();
+    return;
+  }
+  if (!CFG.url) { alert('⚠ URL Apps Script belum diisi di Setting'); return; }
+
+  showLoading(true);
+  try {
+    const remark = document.getElementById('fb-remark').value.trim();
+
+    // Update kolom H (index 8 = kolom ke-8) dengan feedback
+    const d1 = await apiPost({ action:'update', sheet:CFG.fp, rowIndex:CURRENT_ROW.rowIndex, col:8, value:CURRENT_FEEDBACK });
+    if (!d1.ok) throw new Error(d1.message);
+
+    // Jika Other, update juga kolom J (index 10 = kolom ke-10)
+    if (CURRENT_FEEDBACK === 'Other' && remark) {
+      const d2 = await apiPost({ action:'update', sheet:CFG.fp, rowIndex:CURRENT_ROW.rowIndex, col:10, value:remark });
+      if (!d2.ok) throw new Error(d2.message);
+    }
+
+    // Update local data
+    CURRENT_ROW.feedback = CURRENT_FEEDBACK;
+    if (CURRENT_FEEDBACK === 'Other') CURRENT_ROW.remark = remark;
+
+    // Show success
+    document.querySelector('#fp-screen-feedback .card').style.display = 'none';
+    const successEl = document.getElementById('fb-success');
+    successEl.style.display = 'block';
+    document.getElementById('fb-success-msg').innerHTML =
+      `Feedback <b>${esc(CURRENT_FEEDBACK)}</b> untuk <b>${esc(CURRENT_ROW.receipt)}</b> berhasil disimpan.` +
+      (CURRENT_FEEDBACK === 'Other' ? `<br>Remark: ${esc(remark)}` : '');
+
+  } catch(e) {
+    alert('❌ Gagal menyimpan: ' + e.message);
+  } finally {
+    showLoading(false);
+  }
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escQ(s) {
+  return String(s).replace(/'/g, "\'");
+}
+
+async function submitShip(prefix) {
+  const sheetName = CFG[prefix];
+  if (!validate([
+    [`${prefix}-receipt`,'Nomor Receipt'],
+    [`${prefix}-customer`,'Nama Customer'],
+    [`${prefix}-tglkirim`,'Tanggal Pengiriman'],
+    [`${prefix}-status-val`,'Status']
+  ])) return;
+
+  const row = [
+    document.getElementById(`${prefix}-receipt`).value.trim(),
+    document.getElementById(`${prefix}-customer`).value.trim(),
+    document.getElementById(`${prefix}-tglkirim`).value,
+    document.getElementById(`${prefix}-status-val`).value,
+    document.getElementById(`${prefix}-qty`).value.trim(),
+    document.getElementById(`${prefix}-note`).value.trim()
+  ];
+
+  await submitRow(sheetName, row, prefix);
+}
+
+async function submitRow(sheet, row, prefix) {
+  if (!CFG.url) {
+    alert('⚠ URL Apps Script belum diisi. Buka tab ⚙ Setting dan isi URL terlebih dahulu.');
+    return;
+  }
+
+  showLoading(true);
+  try {
+    const data = await apiPost({ action: 'write', sheet, row });
+    if (data.ok) {
+      showSuccess(prefix);
+    } else {
+      alert('❌ Gagal menyimpan: ' + (data.message || 'Unknown error'));
+    }
+  } catch(e) {
+    alert('❌ Koneksi gagal. Cek URL Apps Script di Setting.\n\n' + e.message);
+  } finally {
+    showLoading(false);
+  }
+}
+
+function showLoading(v) {
+  document.getElementById('loadingOverlay').classList.toggle('visible', v);
+}
+
+function showSuccess(prefix) {
+  document.getElementById('form-' + prefix).style.display = 'none';
+  document.getElementById('success-' + prefix).classList.add('visible');
+}
+
+function resetForm(prefix) {
+  document.getElementById('form-' + prefix).style.display = '';
+  document.getElementById('success-' + prefix).classList.remove('visible');
+  // Reset inputs
+  const form = document.getElementById('form-' + prefix);
+  form.querySelectorAll('input:not([type=hidden]), textarea').forEach(el => {
+    if (el.type === 'date') el.value = new Date().toISOString().split('T')[0];
+    else el.value = '';
+  });
+  form.querySelectorAll('.status-option').forEach(el => el.classList.remove('selected'));
+  document.getElementById(`${prefix}-status-val`).value = '';
+}
+</script>
+</body>
+</html>
