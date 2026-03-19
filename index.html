@@ -877,13 +877,7 @@ function saveConfigMobile() {
   alert('✅ Pengaturan tersimpan!');
 }
 
-// ─── TAB SWITCHING ────────────────────────────────────────────────────────────
-function switchTab(name) {
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-  event.currentTarget.classList.add('active');
-}
+// ─── TAB SWITCHING — lihat definisi lengkap di bawah (dekat jalur functions) ──
 
 // ─── STATUS SELECT ────────────────────────────────────────────────────────────
 function selectStatus(prefix, val, el) {
@@ -1323,15 +1317,17 @@ function renderJalurMobile() {
   `).join('');
 }
 
-// Auto-load jalur saat tab dibuka
-const _origSwitchTab = typeof switchTab === 'function' ? switchTab : null;
+// ─── TAB SWITCHING ───────────────────────────────────────────────────────────
 function switchTab(name) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   event.currentTarget.classList.add('active');
-  // Load jalur otomatis saat pertama dibuka
-  if (name === 'jalur' && JALUR_DATA.length === 0) loadJalurMobile();
+  // Auto-load jalur saat pertama dibuka
+  if (name === 'jalur' && JALUR_DATA.length === 0) {
+    console.log('[switchTab] Loading jalur...');
+    loadJalurMobile();
+  }
 }
 </script>
 </body>
