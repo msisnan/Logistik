@@ -840,20 +840,39 @@ async function loadFPData() {
     // Map rows → objects, filter hanya yang bukan "Sudah Diterima Cust"
     // Server menyisipkan actual sheet row number sebagai elemen terakhir array
     // Ini dipakai untuk update cell yang tepat saat submit feedback
+    // Log raw rows untuk debug
+    if (data.rows.length > 0) {
+      console.log('[loadFPData] row length:', data.rows[0].length);
+      console.log('[loadFPData] row[0] sample:', JSON.stringify(data.rows[0]));
+      // Cari row yang ada feedback-nya
+      const withFb = data.rows.filter(r => r[7] && String(r[7]).trim());
+      if (withFb.length) console.log('[loadFPData] r[7] feedback sample:', JSON.stringify(withFb[0][7]));
+    }
+
     FP_DATA = data.rows
-      .map(r => ({
-        rowIndex:    r[r.length - 1],
-        receipt:     String(r[0] || '').trim(),
-        customer:    String(r[1] || '').trim(),
-        requestDate: parseDate(r[2]),
-        sla:         (r[3] !== '' && r[3] != null) ? String(r[3]) : '',
-        picSE:       String(r[4] || '').trim(),
-        booking:     String(r[5] || '').trim(),
-        status:      String(r[6] || '').trim(),
-        feedback:    String(r[7] || '').trim(),
-        remark:      String(r[9] || '').trim()
-      }))
+      .map(r => {
+        // rowIndex: server append di posisi terakhir (setelah semua kolom sheet)
+        // Sheet punya kolom A-N (14 kolom, index 0-13), rowIndex di index 14
+        const rowIdx = r[r.length - 1];
+        const feedback = String(r[7] || '').trim();
+        return {
+          rowIndex:    rowIdx,
+          receipt:     String(r[0] || '').trim(),
+          customer:    String(r[1] || '').trim(),
+          requestDate: parseDate(r[2]),
+          sla:         (r[3] !== '' && r[3] != null) ? String(r[3]) : '',
+          picSE:       String(r[4] || '').trim(),
+          booking:     String(r[5] || '').trim(),
+          status:      String(r[6] || '').trim(),
+          feedback:    feedback,
+          remark:      String(r[9] || '').trim()
+        };
+      })
       .filter(r => r.receipt);
+    
+    console.log('[loadFPData] Total rows:', FP_DATA.length);
+    console.log('[loadFPData] With feedback:', FP_DATA.filter(r => r.feedback).length);
+    console.log('[loadFPData] Sudah Diterima:', FP_DATA.filter(r => r.feedback === 'Sudah Diterima Cust').length);
 
     renderPICList();
   } catch(e) {
@@ -944,11 +963,15 @@ function showReceiptList(picName) {
   document.getElementById('fp-screen-receipt').style.display  = 'block';
   document.getElementById('fp-screen-feedback').style.display = 'none';
 
-  // Tampilkan hanya yang feedback (kolom H) bukan "Sudah Diterima Cust"
-  const items = FP_DATA.filter(r =>
-    (r.picSE || '(Tanpa PIC)').trim() === picName.trim() &&
-    (r.feedback || '').trim() !== 'Sudah Diterima Cust'
-  );
+  // Filter: tampilkan hanya yang feedback (kolom H) bukan "Sudah Diterima Cust"
+  const allForPIC = FP_DATA.filter(r => (r.picSE || '(Tanpa PIC)').trim() === picName.trim());
+  const items = allForPIC.filter(r => {
+    const fb = (r.feedback || '').trim();
+    return fb !== 'Sudah Diterima Cust';
+  });
+  // Debug: tampilkan di console untuk troubleshoot
+  console.log('[Screen2] PIC:', picName, '| Total:', allForPIC.length, '| Filtered:', items.length);
+  allForPIC.forEach(r => console.log('  receipt:', r.receipt, '| feedback:[' + r.feedback + '] len:', (r.feedback||'').length));
   const listEl = document.getElementById('fp-receipt-list');
 
   if (!items.length) {
