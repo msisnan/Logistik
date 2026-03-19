@@ -1219,6 +1219,7 @@ async function loadJalurMobile() {
   listEl.innerHTML = '<div class="jalur-loading"><div class="fp-spinner"></div><div>Memuat jalur hari ini...</div></div>';
 
   try {
+    // Biarkan server yang hitung H+1 — tidak perlu kirim tanggal dari client
     const data = await apiFetch('jalur', {});
     if (!data.rows || data.rows.length === 0) {
       listEl.innerHTML = '<div class="jalur-empty">🗺 Tidak ada data jalur hari ini yang sesuai filter Magelang/UBM</div>';
@@ -1236,7 +1237,7 @@ async function loadJalurMobile() {
     // Cari tanggal hari ini WIB
     const wib = new Date(new Date().getTime() + 7*60*60*1000);
     document.getElementById('jalur-m-sub').textContent =
-      `Tanggal ${wib.getUTCDate()} — ${JALUR_DATA.length} pengiriman`;
+      `Jalur besok (tgl ${tanggalH1}) — ${JALUR_DATA.length} pengiriman`;
 
     renderJalurMobile();
   } catch(e) {
@@ -1253,11 +1254,11 @@ function renderJalurMobile() {
   // Cari key kolom penting
   const keyNoReceive = JALUR_HEADERS.find(h => h.toUpperCase().includes('NO RECEIVE')) || '';
   const keyNameShip  = JALUR_HEADERS.find(h => h.toUpperCase().includes('NAME SHIP'))  || '';
-  const keyAddress   = JALUR_HEADERS.find(h => h.toUpperCase().includes('ADRESS') || h.toUpperCase().includes('ADDRESS')) || '';
+  const keyAddress   = JALUR_HEADERS.find(h => h.toUpperCase().includes('ADRESS')) || '';
   const keyDriver    = JALUR_HEADERS.find(h => h.toUpperCase() === 'DRIVER') || '';
   const keyArmada    = JALUR_HEADERS.find(h => h.toUpperCase() === 'ARMADA') || '';
   const keyQty       = JALUR_HEADERS.find(h => h.toUpperCase() === 'QTY')    || '';
-  const keyDC        = JALUR_HEADERS.find(h => h.toUpperCase().includes('DC') && !h.toUpperCase().includes('ADRESS')) || '';
+  const keyDC        = JALUR_HEADERS.find(h => h.toUpperCase() === 'DC') || '';
   const keyNoLC      = JALUR_HEADERS.find(h => h.toUpperCase().includes('NO LC')) || '';
   const keyReqDate   = JALUR_HEADERS.find(h => h.toUpperCase().includes('REQ DATE')) || '';
   const keyReason    = JALUR_HEADERS.find(h => h.toUpperCase() === 'REASON') || '';
