@@ -1247,13 +1247,10 @@ async function loadJalurMobile() {
     });
     console.log('[Jalur] Parsed rows:', JALUR_DATA.length, '| Headers:', JALUR_HEADERS);
 
-    // Label: ambil tanggal dari data REQ DATE atau STORE BOOKING jika ada,
-    // atau tampilkan "Jalur besok" tanpa asumsi tanggal
     const wib = new Date(new Date().getTime() + 7*60*60*1000);
-    const h1Date = new Date(wib.getTime() + 24*60*60*1000); // besok WIB
-    const tglLabel = h1Date.getUTCDate() + '/' + (h1Date.getUTCMonth()+1) + '/' + h1Date.getUTCFullYear();
+    const tglHariIni = wib.getUTCDate() + '/' + (wib.getUTCMonth()+1) + '/' + wib.getUTCFullYear();
     document.getElementById('jalur-m-sub').textContent =
-      `Jalur besok (${tglLabel}) — ${JALUR_DATA.length} pengiriman`;
+      `Jalur Hari Ini (${tglHariIni}) — ${JALUR_DATA.length} pengiriman`;
 
     renderJalurMobile();
   } catch(e) {
