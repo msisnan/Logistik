@@ -532,6 +532,23 @@
   }
   .btn-print:hover { background: var(--accent); color: white; }
 
+  /* SELESAI BUTTON */
+  .btn-selesai {
+    background: rgba(46,204,138,0.1);
+    border: 1px solid var(--green);
+    color: var(--green);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    font-family: var(--sans);
+  }
+  .btn-selesai:hover { background: var(--green); color: white; }
+  .btn-selesai.done { background: rgba(46,204,138,0.15); color: var(--green); opacity: 0.5; cursor: default; }
+
   /* RESPONSIVE hint */
   .desktop-only { display: block; }
 </style>
@@ -1034,6 +1051,7 @@ async function loadXPDC() {
     DATA.xpdc = rows
       .filter(r => r[0] && String(r[0]).trim() !== '')
       .map(r => ({
+        _rowIndex: r[r.length - 1],  // actual sheet row dari server
         receipt:  String(r[0]).trim(),
         customer: String(r[1] || '').trim(),
         tglKirim: parseSheetDate(r[2]),
@@ -1123,13 +1141,19 @@ function renderShipPage(prefix, data) {
 
   wrapper.innerHTML = `<table>
     <thead><tr>
-      ${thS(prefix,'receipt','Receipt')}${thS(prefix,'customer','Customer')}${thS(prefix,'tglKirim','Tgl Kirim')}${thS(prefix,'','H-')}${thS(prefix,'status','Status')}${thS(prefix,'qty','Qty/Koli')}${thS(prefix,'note','Note')}${prefix==='xpdc'?'<th>Print</th>':''}
+      ${thS(prefix,'receipt','Receipt')}${thS(prefix,'customer','Customer')}${thS(prefix,'tglKirim','Tgl Kirim')}${thS(prefix,'','H-')}${thS(prefix,'status','Status')}${thS(prefix,'qty','Qty/Koli')}${thS(prefix,'note','Note')}${prefix==='xpdc'?'<th>Aksi</th>':''}
     </tr></thead>
     <tbody>${filtered.map(r => {
       const h = getHLevel(r.tglKirim);
       const rowClass = h === 0 ? 'h0-row' : h === 1 ? 'h1-row' : h === 2 ? 'h2-row' : h === 3 ? 'h3-row' : '';
       const printBtn = prefix === 'xpdc'
-        ? `<td><button class="btn-print" onclick='printSurat(${JSON.stringify(r)})'>🖨 Print</button></td>`
+        ? `<td style="white-space:nowrap">
+            <button class="btn-print" onclick='printSurat(${JSON.stringify(r)})' style="margin-bottom:4px">🖨 Print</button><br>
+            ${r.status === 'Selesai'
+              ? `<button class="btn-selesai done" disabled>✓ Selesai</button>`
+              : `<button class="btn-selesai" onclick='tandaiSelesai(${JSON.stringify(r)}, this)'>✓ Selesai</button>`
+            }
+          </td>`
         : '';
       return `<tr class="${rowClass}">
         <td style="font-family:var(--mono);font-size:11px;color:var(--accent)">${r.receipt}</td>
@@ -1156,10 +1180,10 @@ function renderReminders(prefix, data) {
   const h2 = data.filter(r => getHLevel(r.tglKirim) === 2 && !['Selesai','Cancelled'].includes(r.status));
   const h3 = data.filter(r => getHLevel(r.tglKirim) === 3 && !['Selesai','Cancelled'].includes(r.status));
   let html = '';
-  if (h0.length) html += `<div class="reminder-banner"><div class="reminder-dot"></div><b style="color:#f53030">🚨 HARI INI:</b>&nbsp;${h0.map(r => `${r.receipt} (${r.customer})`).join(', ')} — harus kirim hari ini!</div>`;
-  if (h1.length) html += `<div class="reminder-banner"><div class="reminder-dot"></div><b style="color:var(--red)">H-1 BESOK:</b>&nbsp;${h1.map(r => `${r.receipt} (${r.customer})`).join(', ')} — segera siapkan packing!</div>`;
-  if (h2.length) html += `<div class="reminder-banner warn"><div class="reminder-dot warn"></div><b style="color:var(--orange)">H-2 LUSA:</b>&nbsp;${h2.map(r => `${r.receipt} (${r.customer})`).join(', ')} — mulai persiapan packing</div>`;
-  if (h3.length) html += `<div class="reminder-banner info"><div class="reminder-dot info"></div><b style="color:var(--yellow)">H-3:</b>&nbsp;${h3.map(r => `${r.receipt} (${r.customer})`).join(', ')} — informasi awal ke tim packing</div>`;
+  if (h0.length) html += `<div class="reminder-banner"><div class="reminder-dot"></div><b style="color:#f53030">🚨 HARI INI:</b>&nbsp;${h0.map(r => r.customer).join(', ')} — harus kirim hari ini!</div>`;
+  if (h1.length) html += `<div class="reminder-banner"><div class="reminder-dot"></div><b style="color:var(--red)">H-1 BESOK:</b>&nbsp;${h1.map(r => r.customer).join(', ')} — segera siapkan packing!</div>`;
+  if (h2.length) html += `<div class="reminder-banner warn"><div class="reminder-dot warn"></div><b style="color:var(--orange)">H-2 LUSA:</b>&nbsp;${h2.map(r => r.customer).join(', ')} — mulai persiapan packing</div>`;
+  if (h3.length) html += `<div class="reminder-banner info"><div class="reminder-dot info"></div><b style="color:var(--yellow)">H-3:</b>&nbsp;${h3.map(r => r.customer).join(', ')} — informasi awal ke tim packing</div>`;
   el.innerHTML = html;
 }
 
@@ -1304,6 +1328,60 @@ async function sendReminderCheck() {
     if (!items.length) return;
     await xhrGet(`${CONFIG.url}?action=sendReminder&email=${encodeURIComponent(CONFIG.email)}&items=${encodeURIComponent(JSON.stringify(items))}`);
   } catch(e) {}
+}
+
+// ─── TANDAI SELESAI XPDC ─────────────────────────────────────────────────────
+async function tandaiSelesai(r, btn) {
+  if (!CONFIG.url) { notify('⚠ URL belum dikonfigurasi', 'error'); return; }
+  if (!confirm(`Tandai ${r.receipt} (${r.customer}) sebagai Selesai?`)) return;
+
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  try {
+    // Cari rowIndex dari DATA.xpdc
+    const item = DATA.xpdc.find(x => x.receipt === r.receipt);
+    if (!item) throw new Error('Data tidak ditemukan');
+
+    // Update kolom Status (kolom 4 = index 4, 1-based = kolom D)
+    const resp = await xhrPost(CONFIG.url, {
+      action:   'update',
+      sheet:    CONFIG.sheetXPDC,
+      rowIndex: item._rowIndex,
+      col:      4,
+      value:    'Selesai'
+    });
+
+    if (!resp.ok) throw new Error(resp.message);
+
+    // Update local data
+    item.status = 'Selesai';
+    btn.className = 'btn-selesai done';
+    btn.textContent = '✓ Selesai';
+    btn.disabled = true;
+    notify(`✅ ${r.receipt} ditandai Selesai`, 'success');
+
+    // Refresh badge
+    updateBadge('xpdc', DATA.xpdc.filter(x => ['Pending','Packing'].includes(x.status)).length);
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '✓ Selesai';
+    notify('❌ Gagal: ' + e.message, 'error');
+  }
+}
+
+function xhrPost(url, body) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.setRequestHeader('Content-Type', 'text/plain');
+    xhr.timeout = 30000;
+    xhr.onload  = () => { try { resolve(JSON.parse(xhr.responseText)); } catch(e) { reject(e); } };
+    xhr.onerror = () => reject(new Error('Koneksi gagal'));
+    xhr.ontimeout = () => reject(new Error('Timeout'));
+    xhr.send(JSON.stringify(body));
+  });
 }
 
 // ─── PRINT SURAT PENGIRIMAN ──────────────────────────────────────────────────
