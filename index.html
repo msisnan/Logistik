@@ -637,6 +637,18 @@
         <label class="form-label">Note</label>
         <textarea class="form-input" id="xpdc-note" placeholder="Catatan tambahan..."></textarea>
       </div>
+      <div class="form-group">
+        <label class="form-label">Alamat Pengiriman</label>
+        <textarea class="form-input" id="xpdc-alamat" rows="2" placeholder="Alamat lengkap pengiriman..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Biaya Pengiriman</label>
+        <input class="form-input" id="xpdc-biaya" type="text" placeholder="Contoh: Rp 150.000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">SMT</label>
+        <input class="form-input" id="xpdc-smt" type="text" placeholder="Nama SMT...">
+      </div>
       <button class="btn-submit" onclick="submitShip('xpdc')">
         <span>💾</span> Simpan Data
       </button>
@@ -1163,7 +1175,7 @@ async function submitShip(prefix) {
     [`${prefix}-status-val`,'Status']
   ])) return;
 
-  const row = [
+  let row = [
     document.getElementById(`${prefix}-receipt`).value.trim(),
     document.getElementById(`${prefix}-customer`).value.trim(),
     document.getElementById(`${prefix}-tglkirim`).value,
@@ -1171,6 +1183,15 @@ async function submitShip(prefix) {
     document.getElementById(`${prefix}-qty`).value.trim(),
     document.getElementById(`${prefix}-note`).value.trim()
   ];
+
+  // XPDC punya 3 kolom tambahan: Alamat, Biaya, SMT
+  if (prefix === 'xpdc') {
+    row.push(
+      document.getElementById('xpdc-alamat').value.trim(),
+      document.getElementById('xpdc-biaya').value.trim(),
+      document.getElementById('xpdc-smt').value.trim()
+    );
+  }
 
   await submitRow(sheetName, row, prefix);
 }
