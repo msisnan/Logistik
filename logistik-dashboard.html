@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logistik Monitoring Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --accent: #4f8ef7;
+    --accent2: #7c5cfc;
+    --green: #2ecc8a;
+    --yellow: #f5c842;
+    --orange: #f7934f;
+    --red: #f75f5f;
+    --text: #e8eaf6;
+    --text2: #8b90b8;
+    --text3: #555a7a;
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .topbar-logo .icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .topbar-logo span {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text);
+  }
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .topbar-date {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+  }
+  .btn-refresh {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: var(--sans);
+    cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    transition: all 0.2s;
+  }
+  .btn-refresh:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-refresh.spinning .refresh-icon { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .refresh-icon { display: inline-block; }
+
+  /* MAIN LAYOUT */
+  .main {
+    display: flex;
+    flex: 1;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .sidebar-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text3);
+    padding: 0 20px;
+    margin: 8px 0 4px;
+    text-transform: uppercase;
+  }
+  .nav-item {
+    margin: 0 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    transition: all 0.15s;
+    position: relative;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: rgba(79,142,247,0.12); color: var(--accent); }
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: -10px;
+    top: 50%; transform: translateY(-50%);
+    width: 3px; height: 20px;
+    background: var(--accent);
+    border-radius: 0 2px 2px 0;
+  }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+  .nav-badge {
+    margin-left: auto;
+    background: var(--red);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-family: var(--mono);
+  }
+  .nav-badge.warn { background: var(--orange); }
+  .nav-badge.ok { background: var(--green); }
+
+  /* CONTENT */
+  .content {
+    flex: 1;
+    padding: 24px 28px;
+    overflow-y: auto;
+    min-width: 0;
+  }
+
+  /* PAGE HEADER */
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .page-title {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+  .page-sub {
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 4px;
+  }
+  .header-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  /* SUMMARY CARDS */
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--accent); }
+  .card-label {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--text3);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .card-value {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .card-value.blue { color: var(--accent); }
+  .card-value.yellow { color: var(--yellow); }
+  .card-value.orange { color: var(--orange); }
+  .card-value.red { color: var(--red); }
+  .card-value.green { color: var(--green); }
+  .card-glow {
+    position: absolute; bottom: -20px; right: -20px;
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    opacity: 0.07;
+  }
+  .card-glow.blue { background: var(--accent); }
+  .card-glow.yellow { background: var(--yellow); }
+  .card-glow.orange { background: var(--orange); }
+  .card-glow.red { background: var(--red); }
+  .card-glow.green { background: var(--green); }
+
+  /* FILTERS */
+  .filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: var(--sans);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .filter-input:focus { border-color: var(--accent); }
+  .filter-input::placeholder { color: var(--text3); }
+  select.filter-input { cursor: pointer; }
+  .filter-label {
+    font-size: 11px;
+    color: var(--text2);
+    white-space: nowrap;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* REMINDER BANNER */
+  .reminder-banner {
+    background: rgba(247,93,95,0.08);
+    border: 1px solid rgba(247,93,95,0.25);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+  }
+  .reminder-banner.warn {
+    background: rgba(247,147,79,0.08);
+    border-color: rgba(247,147,79,0.25);
+  }
+  .reminder-banner.info {
+    background: rgba(245,200,66,0.08);
+    border-color: rgba(245,200,66,0.25);
+  }
+  .reminder-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--red);
+    flex-shrink: 0;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  .reminder-dot.warn { background: var(--orange); }
+  .reminder-dot.info { background: var(--yellow); }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  /* TABLE */
+  .table-wrapper {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead tr {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    padding: 10px 14px;
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--text3);
+    text-transform: uppercase;
+    font-weight: 400;
+    white-space: nowrap;
+  }
+  th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s;
+  }
+  th.sortable:hover { color: var(--text2); }
+  th.sort-asc, th.sort-desc { color: var(--accent); }
+  th.sort-asc::after  { content: ' ↑'; }
+  th.sort-desc::after { content: ' ↓'; }
+  td {
+    padding: 11px 14px;
+    border-bottom: 1px solid rgba(46,51,80,0.5);
+    color: var(--text2);
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr.h0-row td { background: rgba(220,38,38,0.08); }
+  tr.h1-row td { background: rgba(247,93,95,0.05); }
+  tr.h2-row td { background: rgba(247,147,79,0.05); }
+  tr.h3-row td { background: rgba(245,200,66,0.04); }
+  tr:hover td { background: rgba(79,142,247,0.04); }
+
+  /* STATUS BADGE */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; }
+  .badge.pending { background: rgba(139,144,184,0.12); color: var(--text2); }
+  .badge.pending::before { background: var(--text2); }
+  .badge.packing { background: rgba(245,200,66,0.12); color: var(--yellow); }
+  .badge.packing::before { background: var(--yellow); }
+  .badge.siap { background: rgba(124,92,252,0.12); color: var(--accent2); }
+  .badge.siap::before { background: var(--accent2); }
+  .badge.kirim { background: rgba(79,142,247,0.12); color: var(--accent); }
+  .badge.kirim::before { background: var(--accent); }
+  .badge.selesai { background: rgba(46,204,138,0.12); color: var(--green); }
+  .badge.selesai::before { background: var(--green); }
+  .badge.cancelled { background: rgba(247,93,95,0.12); color: var(--red); }
+  .badge.cancelled::before { background: var(--red); }
+  .badge.indent { background: rgba(247,147,79,0.12); color: var(--orange); }
+  .badge.indent::before { background: var(--orange); }
+  .badge.pindah { background: rgba(245,200,66,0.12); color: var(--yellow); }
+  .badge.pindah::before { background: var(--yellow); }
+  .badge.diterima { background: rgba(46,204,138,0.12); color: var(--green); }
+  .badge.diterima::before { background: var(--green); }
+  .badge.dc { background: rgba(124,92,252,0.12); color: var(--accent2); }
+  .badge.dc::before { background: var(--accent2); }
+  .badge.other { background: rgba(139,144,184,0.12); color: var(--text2); }
+  .badge.other::before { background: var(--text2); }
+
+  /* COUNTDOWN BADGE */
+  .countdown {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .countdown.h0 { background: rgba(220,38,38,0.25); color: #f53030; }
+  .countdown.h1 { background: rgba(247,93,95,0.2); color: #f7936f; }
+  .countdown.h2 { background: rgba(247,147,79,0.2); color: var(--orange); }
+  .countdown.h3 { background: rgba(245,200,66,0.2); color: var(--yellow); }
+
+  /* EMPTY STATE */
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text3);
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.4; }
+  .empty-text { font-size: 13px; }
+
+  /* LOADING */
+  .loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text3);
+    font-size: 13px;
+    font-family: var(--mono);
+  }
+  .loading-dots::after {
+    content: '...';
+    animation: dots 1.2s steps(3, end) infinite;
+  }
+  @keyframes dots {
+    0%  { content: '.'; }
+    33% { content: '..'; }
+    66% { content: '...'; }
+  }
+
+  /* CONFIG PANEL */
+  .config-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .config-title {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .config-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .config-field { display: flex; flex-direction: column; gap: 5px; }
+  .config-label { font-size: 11px; color: var(--text2); }
+  .config-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: var(--sans);
+    outline: none;
+    width: 100%;
+    transition: border-color 0.2s;
+  }
+  .config-input:focus { border-color: var(--accent); }
+  .btn-save {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--sans);
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .btn-save:hover { opacity: 0.85; }
+  .btn-secondary {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: var(--sans);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* TABS (for page sub-tabs if needed) */
+  .hidden { display: none !important; }
+  .tab-content { }
+
+  /* NOTIFICATION AREA */
+  #notifications {
+    position: fixed;
+    top: 70px; right: 20px;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 320px;
+  }
+  .notif {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 12px;
+    animation: slideIn 0.3s ease;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .notif.error { border-color: rgba(247,93,95,0.4); }
+  .notif.success { border-color: rgba(46,204,138,0.4); }
+  @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* PRINT BUTTON */
+  .btn-print {
+    background: rgba(79,142,247,0.1);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    font-family: var(--sans);
+  }
+  .btn-print:hover { background: var(--accent); color: white; }
+
+  /* RESPONSIVE hint */
+  .desktop-only { display: block; }
+</style>
+</head>
+<body>
+
+<div id="notifications"></div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-logo">
+    <div class="icon">📦</div>
+    <span>LOGISTIK MONITOR</span>
+  </div>
+  <div class="topbar-right">
+    <span class="topbar-date" id="currentDate"></span>
+    <button class="btn-refresh" id="btnRefresh" onclick="loadAll()">
+      <span class="refresh-icon">↻</span> Refresh
+    </button>
+    <button class="btn-secondary" onclick="showConfig()">⚙ Konfigurasi</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <span class="sidebar-label">Menu</span>
+    <div class="nav-item" id="nav-config" onclick="showPage('config')">
+      <span class="nav-icon">⚙</span> Konfigurasi
+    </div>
+    <span class="sidebar-label">Monitoring</span>
+    <div class="nav-item active" id="nav-fulfillment" onclick="showPage('fulfillment')">
+      <span class="nav-icon">⏳</span> Fulfillment Pending
+      <span class="nav-badge" id="badge-fulfillment">—</span>
+    </div>
+    <div class="nav-item" id="nav-xpdc" onclick="showPage('xpdc')">
+      <span class="nav-icon">🚚</span> Kirim XPDC
+      <span class="nav-badge warn" id="badge-xpdc">—</span>
+    </div>
+    <div class="nav-item" id="nav-rthub" onclick="showPage('rthub')">
+      <span class="nav-icon">🏭</span> Kirim RT HUB
+      <span class="nav-badge warn" id="badge-rthub">—</span>
+    </div>
+    <div class="nav-item" id="nav-jalur" onclick="showPage('jalur')">
+      <span class="nav-icon">🗺</span> Jalur Pengiriman
+      <span class="nav-badge ok" id="badge-jalur">—</span>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- CONFIG PAGE -->
+    <div id="page-config" class="tab-content hidden">
+      <div class="page-header">
+        <div>
+          <div class="page-title">⚙ Konfigurasi</div>
+          <div class="page-sub">Hubungkan ke Google Sheets via Apps Script</div>
+        </div>
+      </div>
+      <div class="config-panel">
+        <div class="config-title">🔗 Google Apps Script Web App URL</div>
+        <div class="config-grid">
+          <div class="config-field" style="grid-column:1/-1">
+            <span class="config-label">URL Apps Script (untuk semua sheet)</span>
+            <input class="config-input" id="cfg-url" type="text" placeholder="https://script.google.com/macros/s/AKfycb.../exec">
+          </div>
+          <div class="config-field">
+            <span class="config-label">ID Spreadsheet</span>
+            <input class="config-input" id="cfg-sheet-id" type="text" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms">
+          </div>
+          <div class="config-field">
+            <span class="config-label">Nama Sheet — Fulfillment Pending</span>
+            <input class="config-input" id="cfg-sheet-fp" type="text" value="Fulfillment Pending" placeholder="Fulfillment Pending">
+          </div>
+          <div class="config-field">
+            <span class="config-label">Nama Sheet — XPDC</span>
+            <input class="config-input" id="cfg-sheet-xpdc" type="text" value="Kirim XPDC" placeholder="Kirim XPDC">
+          </div>
+          <div class="config-field">
+            <span class="config-label">Nama Sheet — RT HUB</span>
+            <input class="config-input" id="cfg-sheet-rthub" type="text" value="Kirim RT HUB" placeholder="Kirim RT HUB">
+          </div>
+          <div class="config-field">
+            <span class="config-label">Email untuk notifikasi reminder</span>
+            <input class="config-input" id="cfg-email" type="email" placeholder="logistik@perusahaan.com">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn-save" onclick="saveConfig()">💾 Simpan Konfigurasi</button>
+          <button class="btn-secondary" onclick="testConnection()">🔌 Test Koneksi</button>
+        </div>
+      </div>
+      <div class="config-panel">
+        <div class="config-title">📋 Panduan Setup Google Apps Script</div>
+        <div style="font-size:12px; color:var(--text2); line-height:1.9; font-family:var(--mono);">
+          <b style="color:var(--text)">Langkah 1:</b> Buka Google Spreadsheet kamu<br>
+          <b style="color:var(--text)">Langkah 2:</b> Klik menu <span style="color:var(--accent)">Extensions → Apps Script</span><br>
+          <b style="color:var(--text)">Langkah 3:</b> Hapus kode yang ada, paste kode Apps Script dari file <span style="color:var(--accent)">apps-script.gs</span> yang disertakan<br>
+          <b style="color:var(--text)">Langkah 4:</b> Klik <span style="color:var(--accent)">Deploy → New Deployment → Web App</span><br>
+          <b style="color:var(--text)">Langkah 5:</b> Set <span style="color:var(--yellow)">"Who has access" → Anyone</span><br>
+          <b style="color:var(--text)">Langkah 6:</b> Copy URL yang muncul, paste di field URL di atas<br>
+          <b style="color:var(--text)">Langkah 7:</b> Klik Simpan Konfigurasi → Test Koneksi
+        </div>
+      </div>
+    </div>
+
+    <!-- FULFILLMENT PENDING PAGE -->
+    <div id="page-fulfillment" class="tab-content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">⏳ Fulfillment Pending</div>
+          <div class="page-sub">Monitor status fulfillment order yang belum selesai</div>
+        </div>
+      </div>
+      <div class="summary-row" id="fp-summary"></div>
+      <div class="filters">
+        <span class="filter-label">🔍 Filter:</span>
+        <input class="filter-input" id="fp-search" type="text" placeholder="Cari receipt / customer..." oninput="renderFP()">
+        <select class="filter-input" id="fp-status" onchange="renderFP()">
+          <option value="">Semua Feedback</option>
+          <option>Sudah Diterima Cust</option>
+          <option>Pindah Request Date</option>
+          <option>Indent</option>
+          <option>Fisik masih di DC</option>
+          <option>Other</option>
+        </select>
+        <input class="filter-input" id="fp-date" type="date" onchange="renderFP()">
+        <button class="btn-secondary" onclick="clearFilters('fp')">✕ Reset</button>
+      </div>
+      <div id="fp-table-wrapper" class="table-wrapper">
+        <div class="loading"><span class="loading-dots">Memuat data</span></div>
+      </div>
+    </div>
+
+    <!-- XPDC PAGE -->
+    <div id="page-xpdc" class="tab-content hidden">
+      <div class="page-header">
+        <div>
+          <div class="page-title">🚚 Kirim Barang XPDC</div>
+          <div class="page-sub">Monitoring pengiriman via XPDC — reminder packing H-3/H-2/H-1</div>
+        </div>
+      </div>
+      <div id="xpdc-reminders"></div>
+      <div class="summary-row" id="xpdc-summary"></div>
+      <div class="filters">
+        <span class="filter-label">🔍 Filter:</span>
+        <input class="filter-input" id="xpdc-search" type="text" placeholder="Cari receipt / customer..." oninput="renderXPDC()">
+        <select class="filter-input" id="xpdc-status" onchange="renderXPDC()">
+          <option value="">Semua Feedback</option>
+          <option>Pending</option>
+          <option>Packing</option>
+          <option>Siap Kirim</option>
+          <option>Dalam Pengiriman</option>
+          <option>Selesai</option>
+          <option>Cancelled</option>
+        </select>
+        <input class="filter-input" id="xpdc-date" type="date" onchange="renderXPDC()">
+        <select class="filter-input" id="xpdc-reminder" onchange="renderXPDC()">
+          <option value="">Semua</option>
+          <option value="h1">⚠ H-1</option>
+          <option value="h2">🟠 H-2</option>
+          <option value="h3">🟡 H-3</option>
+        </select>
+        <button class="btn-secondary" onclick="clearFilters('xpdc')">✕ Reset</button>
+      </div>
+      <div id="xpdc-table-wrapper" class="table-wrapper">
+        <div class="loading"><span class="loading-dots">Memuat data</span></div>
+      </div>
+    </div>
+
+    <!-- RT HUB PAGE -->
+    <div id="page-rthub" class="tab-content hidden">
+      <div class="page-header">
+        <div>
+          <div class="page-title">🏭 Kirim Barang RT HUB</div>
+          <div class="page-sub">Monitoring pengiriman via RT HUB — reminder packing H-3/H-2/H-1</div>
+        </div>
+      </div>
+      <div id="rthub-reminders"></div>
+      <div class="summary-row" id="rthub-summary"></div>
+      <div class="filters">
+        <span class="filter-label">🔍 Filter:</span>
+        <input class="filter-input" id="rthub-search" type="text" placeholder="Cari receipt / customer..." oninput="renderRTHUB()">
+        <select class="filter-input" id="rthub-status" onchange="renderRTHUB()">
+          <option value="">Semua Feedback</option>
+          <option>Pending</option>
+          <option>Packing</option>
+          <option>Siap Kirim</option>
+          <option>Dalam Pengiriman</option>
+          <option>Selesai</option>
+          <option>Cancelled</option>
+        </select>
+        <input class="filter-input" id="rthub-date" type="date" onchange="renderRTHUB()">
+        <select class="filter-input" id="rthub-reminder" onchange="renderRTHUB()">
+          <option value="">Semua</option>
+          <option value="h1">⚠ H-1</option>
+          <option value="h2">🟠 H-2</option>
+          <option value="h3">🟡 H-3</option>
+        </select>
+        <button class="btn-secondary" onclick="clearFilters('rthub')">✕ Reset</button>
+      </div>
+      <div id="rthub-table-wrapper" class="table-wrapper">
+        <div class="loading"><span class="loading-dots">Memuat data</span></div>
+      </div>
+    </div>
+
+    <!-- JALUR PENGIRIMAN PAGE -->
+    <div id="page-jalur" class="tab-content hidden">
+      <div class="page-header">
+        <div>
+          <div class="page-title">🗺 Jalur Pengiriman</div>
+          <div class="page-sub" id="jalur-sub">Jalur pengiriman hari ini — filter Magelang Tidar / UBM</div>
+        </div>
+        <div class="header-actions">
+          <input class="filter-input" id="jalur-date-override" type="date" onchange="loadJalur()" title="Override tanggal (kosongkan untuk hari ini)">
+        </div>
+      </div>
+      <div class="summary-row" id="jalur-summary"></div>
+      <div class="filters">
+        <span class="filter-label">🔍 Filter:</span>
+        <input class="filter-input" id="jalur-search" type="text" placeholder="Cari nama, driver, no receive..." oninput="renderJalur()">
+        <select class="filter-input" id="jalur-dc" onchange="renderJalur()">
+          <option value="">Semua DC</option>
+        </select>
+        <select class="filter-input" id="jalur-driver" onchange="renderJalur()">
+          <option value="">Semua Driver</option>
+        </select>
+        <button class="btn-secondary" onclick="clearFiltersJalur()">✕ Reset</button>
+      </div>
+      <div id="jalur-table-wrapper" class="table-wrapper">
+        <div class="loading"><span class="loading-dots">Memuat data</span></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+// ─── CONFIG ─────────────────────────────────────────────────────────────────
+let CONFIG = {
+  url: '',
+  sheetId: '',
+  sheetFP: 'Fulfillment Pending',
+  sheetXPDC: 'Kirim XPDC',
+  sheetRTHUB: 'Kirim RT HUB',
+  email: ''
+};
+
+// ─── DATA STORE ─────────────────────────────────────────────────────────────
+let DATA = { fp: [], xpdc: [], rthub: [], jalur: [], jalurHeaders: [] };
+let SORT = {
+  fp:    { col: '', dir: 1 },
+  xpdc:  { col: '', dir: 1 },
+  rthub: { col: '', dir: 1 },
+  jalur: { col: '', dir: 1 }
+};
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+window.onload = () => {
+  updateDate();
+  loadConfig();
+  loadAll();
+  setInterval(updateDate, 60000);
+  setInterval(loadAll, 5 * 60 * 1000); // auto refresh 5 menit
+};
+
+function updateDate() {
+  const now = new Date();
+  document.getElementById('currentDate').textContent =
+    now.toLocaleDateString('id-ID', { weekday:'short', day:'2-digit', month:'short', year:'numeric' }) +
+    ' ' + now.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' });
+}
+
+// ─── CONFIG ─────────────────────────────────────────────────────────────────
+function loadConfig() {
+  const saved = localStorage.getItem('logistik_config');
+  if (saved) CONFIG = { ...CONFIG, ...JSON.parse(saved) };
+  document.getElementById('cfg-url').value = CONFIG.url || '';
+  document.getElementById('cfg-sheet-id').value = CONFIG.sheetId || '';
+  document.getElementById('cfg-sheet-fp').value = CONFIG.sheetFP || '';
+  document.getElementById('cfg-sheet-xpdc').value = CONFIG.sheetXPDC || '';
+  document.getElementById('cfg-sheet-rthub').value = CONFIG.sheetRTHUB || '';
+  document.getElementById('cfg-email').value = CONFIG.email || '';
+}
+
+function saveConfig() {
+  CONFIG.url = document.getElementById('cfg-url').value.trim();
+  CONFIG.sheetId = document.getElementById('cfg-sheet-id').value.trim();
+  CONFIG.sheetFP = document.getElementById('cfg-sheet-fp').value.trim();
+  CONFIG.sheetXPDC = document.getElementById('cfg-sheet-xpdc').value.trim();
+  CONFIG.sheetRTHUB = document.getElementById('cfg-sheet-rthub').value.trim();
+  CONFIG.email = document.getElementById('cfg-email').value.trim();
+  localStorage.setItem('logistik_config', JSON.stringify(CONFIG));
+  notify('✅ Konfigurasi tersimpan', 'success');
+}
+
+function showConfig() { showPage('config'); }
+
+async function testConnection() {
+  if (!CONFIG.url) { notify('⚠ URL belum diisi', 'error'); return; }
+  try {
+    const d = await xhrGet(`${CONFIG.url}?action=ping`);
+    notify(d.ok ? '✅ Koneksi berhasil!' : '❌ ' + d.message, d.ok ? 'success' : 'error');
+  } catch(e) {
+    notify('❌ ' + e.message, 'error');
+  }
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────────────────────────
+function showPage(page) {
+  ['fulfillment','xpdc','rthub','jalur','config'].forEach(p => {
+    document.getElementById('page-' + p).classList.add('hidden');
+    const navEl = document.getElementById('nav-' + p);
+    if (navEl) navEl.classList.remove('active');
+  });
+  document.getElementById('page-' + page).classList.remove('hidden');
+  const navEl = document.getElementById('nav-' + page);
+  if (navEl) navEl.classList.add('active');
+  // Load jalur saat pertama kali dibuka
+  if (page === 'jalur' && DATA.jalur.length === 0) loadJalur();
+}
+
+// ─── DATA FETCH ──────────────────────────────────────────────────────────────
+async function loadAll() {
+  const btn = document.getElementById('btnRefresh');
+  btn.classList.add('spinning');
+  try {
+    await Promise.all([loadFP(), loadXPDC(), loadRTHUB()]);
+  } catch(e) {
+    // use demo data if no config
+  }
+  btn.classList.remove('spinning');
+  checkReminders();
+}
+
+// XHR helper — bypass CORS untuk semua GET request ke Apps Script
+function xhrGet(url) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.timeout = 30000;
+    xhr.onload = function() {
+      const text = xhr.responseText;
+      if (text.trim().startsWith('<')) {
+        reject(new Error('Apps Script mengembalikan HTML. Pastikan sudah Redeploy dengan akses "Anyone".'));
+        return;
+      }
+      try { resolve(JSON.parse(text)); }
+      catch(e) { reject(new Error('Response tidak valid: ' + text.slice(0,100))); }
+    };
+    xhr.onerror   = () => reject(new Error('CORS/Koneksi gagal. Pastikan Apps Script di-deploy dengan Execute as: Me, Who has access: Anyone.'));
+    xhr.ontimeout = () => reject(new Error('Timeout 30 detik — Apps Script tidak merespons.'));
+    xhr.send();
+  });
+}
+
+async function fetchSheet(sheetName, startRow = 1) {
+  if (!CONFIG.url) throw new Error('URL belum dikonfigurasi. Klik ⚙ Konfigurasi dan isi URL Apps Script.');
+  const url = `${CONFIG.url}?action=read&sheet=${encodeURIComponent(sheetName)}&startRow=${startRow}`;
+  const data = await xhrGet(url);
+  if (!data.ok) throw new Error(data.message || 'Error dari server');
+  return data.rows;
+}
+
+// FULFILLMENT PENDING
+// Kolom: A=Receipt | B=Customer Name | C=Request Date | D=SLA | E=PIC SE | F=Booking | G=Status | H=Feedback PIC SE
+// Data mulai baris 3
+async function loadFP() {
+  try {
+    const rows = await fetchSheet(CONFIG.sheetFP, 3);
+    DATA.fp = rows
+      .filter(r => r[0] && String(r[0]).trim() !== '')  // skip baris kosong
+      .map(r => ({
+        receipt:     String(r[0]).trim(),
+        customer:    String(r[1] || '').trim(),
+        requestDate: parseSheetDate(r[2]),
+        sla:         (r[3] !== '' && r[3] !== null && r[3] !== undefined) ? String(r[3]) : '',
+        picSE:       String(r[4] || '').trim(),
+        booking:     String(r[5] || '').trim(),
+        status:      String(r[6] || '').trim(),
+        feedback:    String(r[7] || '').trim()
+      }));
+  } catch(e) {
+    DATA.fp = getDemoFP();
+  }
+  renderFP();
+  updateBadge('fulfillment', DATA.fp.filter(r => !['Sudah Diterima Cust'].includes(r.status)).length);
+}
+
+function getDemoFP() {
+  return [
+    { receipt:'RC-001', customer:'PT Maju Jaya', requestDate:'2026-03-22', sla:'10', picSE:'Budi', booking:'DC Jababeka', feedback:'', status:'Indent' },
+    { receipt:'RC-002', customer:'CV Sentosa', requestDate:'2026-03-20', sla:'8', picSE:'Ani', booking:'DC Cikupa', feedback:'Proses', status:'Fisik masih di DC' },
+    { receipt:'RC-003', customer:'UD Makmur', requestDate:'2026-03-19', sla:'6', picSE:'Doni', booking:'DC Jababeka', feedback:'', status:'Pindah Request Date' },
+    { receipt:'RC-004', customer:'PT Barokah', requestDate:'2026-03-18', sla:'10', picSE:'Siti', booking:'Store, DC Jababeka', feedback:'Done', status:'Sudah Diterima Cust' },
+    { receipt:'RC-005', customer:'CV Terang', requestDate:'2026-03-25', sla:'6', picSE:'Eko', booking:'DC Jababeka', feedback:'', status:'Other' },
+  ];
+}
+
+// ─── SORT HELPERS ─────────────────────────────────────────────────────────────
+function thFP(col, label) {
+  if (!col) return `<th>${label}</th>`;
+  const s = SORT.fp;
+  const cls = s.col === col ? (s.dir === 1 ? 'sortable sort-asc' : 'sortable sort-desc') : 'sortable';
+  return `<th class="${cls}" onclick="sortTable('fp','${col}')">${label}</th>`;
+}
+
+function thS(prefix, col, label) {
+  if (!col) return `<th>${label}</th>`;
+  const s = SORT[prefix];
+  const cls = s.col === col ? (s.dir === 1 ? 'sortable sort-asc' : 'sortable sort-desc') : 'sortable';
+  return `<th class="${cls}" onclick="sortTable('${prefix}','${col}')">${label}</th>`;
+}
+
+function sortTable(prefix, col) {
+  if (SORT[prefix].col === col) {
+    SORT[prefix].dir *= -1; // toggle asc/desc
+  } else {
+    SORT[prefix].col = col;
+    SORT[prefix].dir = 1;
+  }
+  if (prefix === 'fp')    renderFP();
+  if (prefix === 'xpdc')  renderXPDC();
+  if (prefix === 'rthub') renderRTHUB();
+}
+
+function applySort(arr, prefix) {
+  const { col, dir } = SORT[prefix];
+  if (!col) return arr;
+  return [...arr].sort((a, b) => {
+    let va = a[col] ?? '';
+    let vb = b[col] ?? '';
+    // Angka
+    if (!isNaN(va) && !isNaN(vb) && va !== '' && vb !== '') {
+      return (Number(va) - Number(vb)) * dir;
+    }
+    // String
+    return String(va).localeCompare(String(vb), 'id') * dir;
+  });
+}
+
+function renderFP() {
+  const search = document.getElementById('fp-search').value.toLowerCase();
+  const status = document.getElementById('fp-status').value;
+  const date   = document.getElementById('fp-date').value;
+
+  let data = DATA.fp.filter(r => {
+    if (search && !r.receipt.toLowerCase().includes(search) && !r.customer.toLowerCase().includes(search)) return false;
+    // Filter by Feedback PIC SE (kolom H)
+    if (status && (r.feedback || '').trim() !== status) return false;
+    // filter tanggal: bandingkan YYYY-MM-DD dari requestDate
+    if (date && r.requestDate && r.requestDate.slice(0,10) !== date) return false;
+    return true;
+  });
+  data = applySort(data, 'fp');
+
+  // Summary cards
+  const statuses = ['Sudah Diterima Cust','Pindah Request Date','Indent','Fisik masih di DC','Other'];
+  const summary = document.getElementById('fp-summary');
+  const counts = {};
+  statuses.forEach(s => counts[s] = DATA.fp.filter(r => r.status === s).length);
+  const noStatus = DATA.fp.filter(r => !r.status).length;
+  summary.innerHTML = `
+    <div class="card"><div class="card-label">Total</div><div class="card-value blue">${DATA.fp.length}</div><div class="card-glow blue"></div></div>
+    <div class="card"><div class="card-label">Sudah Diterima</div><div class="card-value green">${counts['Sudah Diterima Cust']}</div><div class="card-glow green"></div></div>
+    <div class="card"><div class="card-label">Pindah Date</div><div class="card-value yellow">${counts['Pindah Request Date']}</div><div class="card-glow yellow"></div></div>
+    <div class="card"><div class="card-label">Indent</div><div class="card-value orange">${counts['Indent']}</div><div class="card-glow orange"></div></div>
+    <div class="card"><div class="card-label">Di DC</div><div class="card-value">${counts['Fisik masih di DC']}</div></div>
+    <div class="card"><div class="card-label">Other / Kosong</div><div class="card-value">${counts['Other'] + noStatus}</div></div>
+  `;
+
+  const wrapper = document.getElementById('fp-table-wrapper');
+  if (!data.length) {
+    wrapper.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Tidak ada data</div></div>`;
+    return;
+  }
+  wrapper.innerHTML = `<table>
+    <thead><tr>
+      ${thFP('receipt','Receipt')}${thFP('customer','Customer')}${thFP('requestDate','Request Date')}${thFP('sla','SLA')}${thFP('picSE','PIC SE')}${thFP('booking','Booking')}${thFP('status','Status')}${thFP('feedback','Feedback PIC SE')}
+    </tr></thead>
+    <tbody>${data.map(r => `<tr>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--accent)">${escHtml(r.receipt)}</td>
+      <td style="color:var(--text)">${escHtml(r.customer)}</td>
+      <td style="font-family:var(--mono);font-size:11px">${formatDate(r.requestDate)}</td>
+      <td style="font-family:var(--mono);font-size:11px;text-align:center">${r.sla ? r.sla + ' hr' : '—'}</td>
+      <td>${escHtml(r.picSE)}</td>
+      <td style="font-size:11px">${escHtml(r.booking)}</td>
+      <td>${r.status ? fpBadge(r.status) : '<span style="color:var(--text3);font-size:11px">—</span>'}</td>
+      <td style="font-size:11px;max-width:160px">${escHtml(r.feedback)}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+// XPDC / RT HUB
+// Kolom: Nomor Receipt | Nama Customer | Tanggal Pengiriman | Status | Qty/Koli | Note
+async function loadXPDC() {
+  try {
+    const rows = await fetchSheet(CONFIG.sheetXPDC, 2);
+    DATA.xpdc = rows
+      .filter(r => r[0] && String(r[0]).trim() !== '')
+      .map(r => ({
+        receipt:  String(r[0]).trim(),
+        customer: String(r[1] || '').trim(),
+        tglKirim: parseSheetDate(r[2]),
+        status:   String(r[3] || 'Pending').trim(),
+        qty:      (r[4] !== '' && r[4] !== null && r[4] !== undefined) ? String(r[4]) : '',
+        note:     String(r[5] || '').trim(),
+        alamat:   String(r[6] || '').trim(),
+        biaya:    String(r[7] || '').trim(),
+        smt:      String(r[8] || '').trim()
+      }));
+  } catch(e) { DATA.xpdc = getDemoShip('XPDC'); }
+  renderXPDC();
+  updateBadge('xpdc', DATA.xpdc.filter(r => ['Pending','Packing'].includes(r.status)).length);
+}
+
+async function loadRTHUB() {
+  try {
+    const rows = await fetchSheet(CONFIG.sheetRTHUB, 2);
+    DATA.rthub = rows
+      .filter(r => r[0] && String(r[0]).trim() !== '')
+      .map(r => ({
+        receipt:  String(r[0]).trim(),
+        customer: String(r[1] || '').trim(),
+        tglKirim: parseSheetDate(r[2]),
+        status:   String(r[3] || 'Pending').trim(),
+        qty:      (r[4] !== '' && r[4] !== null && r[4] !== undefined) ? String(r[4]) : '',
+        note:     String(r[5] || '').trim()
+      }));
+  } catch(e) { DATA.rthub = getDemoShip('RTHUB'); }
+  renderRTHUB();
+  updateBadge('rthub', DATA.rthub.filter(r => ['Pending','Packing'].includes(r.status)).length);
+}
+
+function getDemoShip(type) {
+  const today = new Date();
+  const d = (offset) => {
+    const d2 = new Date(today); d2.setDate(d2.getDate() + offset);
+    return d2.toISOString().split('T')[0];
+  };
+  return [
+    { receipt:`${type}-001`, customer:'PT Gemilang', tglKirim: d(1), status:'Packing', qty:'5', note:'Fragile' },
+    { receipt:`${type}-002`, customer:'CV Nusantara', tglKirim: d(2), status:'Pending', qty:'12', note:'' },
+    { receipt:`${type}-003`, customer:'UD Sejahtera', tglKirim: d(3), status:'Pending', qty:'3', note:'COD' },
+    { receipt:`${type}-004`, customer:'PT Maju', tglKirim: d(5), status:'Siap Kirim', qty:'8', note:'' },
+    { receipt:`${type}-005`, customer:'CV Berkah', tglKirim: d(-1), status:'Selesai', qty:'2', note:'Done' },
+    { receipt:`${type}-006`, customer:'PT Abadi', tglKirim: d(0), status:'Dalam Pengiriman', qty:'6', note:'' },
+  ];
+}
+
+function renderShipPage(prefix, data) {
+  const search = document.getElementById(`${prefix}-search`).value.toLowerCase();
+  const status = document.getElementById(`${prefix}-status`).value;
+  const date = document.getElementById(`${prefix}-date`).value;
+  const reminderF = document.getElementById(`${prefix}-reminder`).value;
+
+  let filtered = data.filter(r => {
+    if (search && !r.receipt.toLowerCase().includes(search) && !r.customer.toLowerCase().includes(search)) return false;
+    if (status && r.status !== status) return false;
+    if (date && r.tglKirim && r.tglKirim.slice(0,10) !== date) return false;
+    if (reminderF) {
+      const h = getHLevel(r.tglKirim);
+      if (reminderF === 'h1' && h !== 1) return false;
+      if (reminderF === 'h2' && h !== 2) return false;
+      if (reminderF === 'h3' && h !== 3) return false;
+    }
+    return true;
+  });
+  filtered = applySort(filtered, prefix);
+
+  // Summary
+  const sumEl = document.getElementById(`${prefix}-summary`);
+  const cnt = s => data.filter(r => r.status === s).length;
+  sumEl.innerHTML = `
+    <div class="card"><div class="card-label">Total</div><div class="card-value blue">${data.length}</div><div class="card-glow blue"></div></div>
+    <div class="card"><div class="card-label">Pending</div><div class="card-value">${cnt('Pending')}</div></div>
+    <div class="card"><div class="card-label">Packing</div><div class="card-value yellow">${cnt('Packing')}</div><div class="card-glow yellow"></div></div>
+    <div class="card"><div class="card-label">Siap Kirim</div><div class="card-value" style="color:var(--accent2)">${cnt('Siap Kirim')}</div></div>
+    <div class="card"><div class="card-label">Dalam Kirim</div><div class="card-value blue">${cnt('Dalam Pengiriman')}</div><div class="card-glow blue"></div></div>
+    <div class="card"><div class="card-label">Selesai</div><div class="card-value green">${cnt('Selesai')}</div><div class="card-glow green"></div></div>
+  `;
+
+  const wrapper = document.getElementById(`${prefix}-table-wrapper`);
+  if (!filtered.length) {
+    wrapper.innerHTML = `<div class="empty"><div class="empty-icon">🚛</div><div class="empty-text">Tidak ada data</div></div>`;
+    return;
+  }
+
+  wrapper.innerHTML = `<table>
+    <thead><tr>
+      ${thS(prefix,'receipt','Receipt')}${thS(prefix,'customer','Customer')}${thS(prefix,'tglKirim','Tgl Kirim')}${thS(prefix,'','H-')}${thS(prefix,'status','Status')}${thS(prefix,'qty','Qty/Koli')}${thS(prefix,'note','Note')}${prefix==='xpdc'?'<th>Print</th>':''}
+    </tr></thead>
+    <tbody>${filtered.map(r => {
+      const h = getHLevel(r.tglKirim);
+      const rowClass = h === 0 ? 'h0-row' : h === 1 ? 'h1-row' : h === 2 ? 'h2-row' : h === 3 ? 'h3-row' : '';
+      const printBtn = prefix === 'xpdc'
+        ? `<td><button class="btn-print" onclick='printSurat(${JSON.stringify(r)})'>🖨 Print</button></td>`
+        : '';
+      return `<tr class="${rowClass}">
+        <td style="font-family:var(--mono);font-size:11px;color:var(--accent)">${r.receipt}</td>
+        <td style="color:var(--text)">${r.customer}</td>
+        <td style="font-family:var(--mono);font-size:11px">${formatDate(r.tglKirim)}</td>
+        <td>${h !== null && h <= 3 && !['Selesai','Cancelled'].includes(r.status) ? `<span class="countdown h${h}">${h === 0 ? 'Hari Ini' : 'H-'+h}</span>` : '<span style="color:var(--text3);font-size:11px">—</span>'}</td>
+        <td>${shipBadge(r.status)}</td>
+        <td style="font-family:var(--mono);font-size:12px;text-align:center">${r.qty}</td>
+        <td style="font-size:11px;max-width:150px">${r.note}</td>
+        ${printBtn}
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function renderXPDC() { renderShipPage('xpdc', DATA.xpdc); }
+function renderRTHUB() { renderShipPage('rthub', DATA.rthub); }
+
+// ─── REMINDER BANNERS ────────────────────────────────────────────────────────
+function renderReminders(prefix, data) {
+  const el = document.getElementById(`${prefix}-reminders`);
+  const h0 = data.filter(r => getHLevel(r.tglKirim) === 0 && !['Selesai','Cancelled'].includes(r.status));
+  const h1 = data.filter(r => getHLevel(r.tglKirim) === 1 && !['Selesai','Cancelled'].includes(r.status));
+  const h2 = data.filter(r => getHLevel(r.tglKirim) === 2 && !['Selesai','Cancelled'].includes(r.status));
+  const h3 = data.filter(r => getHLevel(r.tglKirim) === 3 && !['Selesai','Cancelled'].includes(r.status));
+  let html = '';
+  if (h0.length) html += `<div class="reminder-banner"><div class="reminder-dot"></div><b style="color:#f53030">🚨 HARI INI:</b>&nbsp;${h0.map(r => `${r.receipt} (${r.customer})`).join(', ')} — harus kirim hari ini!</div>`;
+  if (h1.length) html += `<div class="reminder-banner"><div class="reminder-dot"></div><b style="color:var(--red)">H-1 BESOK:</b>&nbsp;${h1.map(r => `${r.receipt} (${r.customer})`).join(', ')} — segera siapkan packing!</div>`;
+  if (h2.length) html += `<div class="reminder-banner warn"><div class="reminder-dot warn"></div><b style="color:var(--orange)">H-2 LUSA:</b>&nbsp;${h2.map(r => `${r.receipt} (${r.customer})`).join(', ')} — mulai persiapan packing</div>`;
+  if (h3.length) html += `<div class="reminder-banner info"><div class="reminder-dot info"></div><b style="color:var(--yellow)">H-3:</b>&nbsp;${h3.map(r => `${r.receipt} (${r.customer})`).join(', ')} — informasi awal ke tim packing</div>`;
+  el.innerHTML = html;
+}
+
+// ─── JALUR PENGIRIMAN ────────────────────────────────────────────────────────
+async function loadJalur() {
+  const wrapper = document.getElementById('jalur-table-wrapper');
+  wrapper.innerHTML = '<div class="loading"><span class="loading-dots">Memuat data jalur</span></div>';
+  document.getElementById('jalur-summary').innerHTML = '';
+
+  const dateOverride = document.getElementById('jalur-date-override').value;
+  // Nama sheet = tanggal saja (misal "20")
+  // Default kosong → Apps Script otomatis pakai H+1
+  let tanggal = '';
+  if (dateOverride) {
+    tanggal = String(parseInt(dateOverride.split('-')[2])); // ambil hari dari date picker
+  }
+
+  try {
+    let url = `${CONFIG.url}?action=jalur`;
+    if (tanggal) url += `&tanggal=${tanggal}`;
+    const data = await xhrGet(url);
+    if (!data.ok) throw new Error(data.message);
+
+    // Baris pertama = headers, sisanya = data
+    // rows[0] = headers, rows[1+] = data — jika hanya 1 baris = hanya header = tidak ada data
+    if (!data.rows || data.rows.length <= 1) {
+      DATA.jalur = [];
+      DATA.jalurHeaders = [];
+      wrapper.innerHTML = '<div class="empty"><div class="empty-icon">🗺</div><div class="empty-text">Tidak ada data jalur untuk hari ini yang sesuai filter</div></div>';
+      updateBadge('jalur', 0);
+      return;
+    }
+
+    DATA.jalurHeaders = data.rows[0].map(h => String(h));
+    DATA.jalur = data.rows.slice(1).map(r => {
+      const obj = {};
+      DATA.jalurHeaders.forEach((h, i) => { obj[h] = String(r[i] || '').trim(); });
+      return obj;
+    });
+
+    // Update sub title dengan info tanggal (default H+1)
+    const today = new Date();
+    const wib   = new Date(today.getTime() + 7*60*60*1000);
+    wib.setUTCDate(wib.getUTCDate() + 1); // H+1
+    const tgl   = tanggal || String(wib.getUTCDate());
+    document.getElementById('jalur-sub').textContent =
+      `Jalur pengiriman besok (tgl ${tgl}) — ${DATA.jalur.length} pengiriman Magelang/UBM`;
+
+    // Populate filter DC dan Driver
+    populateJalurFilters();
+    updateBadge('jalur', DATA.jalur.length);
+    renderJalur();
+
+  } catch(e) {
+    wrapper.innerHTML = `<div class="empty"><div class="empty-icon">⚠</div><div class="empty-text">${e.message}</div></div>`;
+    notify('❌ Jalur: ' + e.message, 'error');
+  }
+}
+
+function populateJalurFilters() {
+  const dcSel     = document.getElementById('jalur-dc');
+  const driverSel = document.getElementById('jalur-driver');
+  const dcKey     = DATA.jalurHeaders.find(h => h.toUpperCase() === 'DC') || '';
+  const driverKey = DATA.jalurHeaders.find(h => h.toUpperCase() === 'DRIVER') || '';
+
+  const dcs     = [...new Set(DATA.jalur.map(r => r[dcKey] || '').filter(Boolean))].sort();
+  const drivers = [...new Set(DATA.jalur.map(r => r[driverKey] || '').filter(Boolean))].sort();
+
+  dcSel.innerHTML     = '<option value="">Semua DC</option>'     + dcs.map(v => `<option>${v}</option>`).join('');
+  driverSel.innerHTML = '<option value="">Semua Driver</option>' + drivers.map(v => `<option>${v}</option>`).join('');
+}
+
+function renderJalur() {
+  const search = document.getElementById('jalur-search').value.toLowerCase();
+  const dc     = document.getElementById('jalur-dc').value;
+  const driver = document.getElementById('jalur-driver').value;
+  const dcKey     = DATA.jalurHeaders.find(h => h.toUpperCase() === 'DC') || '';
+  const driverKey = DATA.jalurHeaders.find(h => h.toUpperCase() === 'DRIVER') || '';
+
+  let data = DATA.jalur.filter(r => {
+    if (search) {
+      const haystack = Object.values(r).join(' ').toLowerCase();
+      if (!haystack.includes(search)) return false;
+    }
+    if (dc     && r[dcKey]     !== dc)     return false;
+    if (driver && r[driverKey] !== driver) return false;
+    return true;
+  });
+
+  // Summary
+  const sumEl = document.getElementById('jalur-summary');
+  const totalQty = data.reduce((s, r) => {
+    const qtyKey = DATA.jalurHeaders.find(h => h.toUpperCase() === 'QTY') || '';
+    return s + (parseInt(r[qtyKey]) || 0);
+  }, 0);
+  sumEl.innerHTML = `
+    <div class="card"><div class="card-label">Total Pengiriman</div><div class="card-value blue">${DATA.jalur.length}</div><div class="card-glow blue"></div></div>
+    <div class="card"><div class="card-label">Ditampilkan</div><div class="card-value">${data.length}</div></div>
+    <div class="card"><div class="card-label">Total QTY</div><div class="card-value green">${totalQty}</div><div class="card-glow green"></div></div>
+  `;
+
+  const wrapper = document.getElementById('jalur-table-wrapper');
+  if (!data.length) {
+    wrapper.innerHTML = '<div class="empty"><div class="empty-icon">🗺</div><div class="empty-text">Tidak ada data sesuai filter</div></div>';
+    return;
+  }
+
+  // Render tabel dinamis sesuai header dari sheet
+  const headers = DATA.jalurHeaders;
+  wrapper.innerHTML = `<table>
+    <thead><tr>${headers.map(h => `<th style="white-space:nowrap">${escHtml(h)}</th>`).join('')}</tr></thead>
+    <tbody>${data.map(r => `<tr>${headers.map(h => {
+      const val = r[h] || '';
+      return `<td style="font-size:11px;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis" title="${escHtml(val)}">${escHtml(val)}</td>`;
+    }).join('')}</tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function clearFiltersJalur() {
+  document.getElementById('jalur-search').value = '';
+  document.getElementById('jalur-dc').value     = '';
+  document.getElementById('jalur-driver').value = '';
+  document.getElementById('jalur-date-override').value = '';
+  renderJalur();
+}
+
+function checkReminders() {
+  renderReminders('xpdc', DATA.xpdc);
+  renderReminders('rthub', DATA.rthub);
+  // Email notification check (via Apps Script trigger)
+  if (CONFIG.url && CONFIG.email) {
+    sendReminderCheck();
+  }
+}
+
+async function sendReminderCheck() {
+  try {
+    const items = [...DATA.xpdc, ...DATA.rthub].filter(r => {
+      const h = getHLevel(r.tglKirim);
+      return h >= 1 && h <= 3 && !['Selesai','Cancelled'].includes(r.status);
+    });
+    if (!items.length) return;
+    await xhrGet(`${CONFIG.url}?action=sendReminder&email=${encodeURIComponent(CONFIG.email)}&items=${encodeURIComponent(JSON.stringify(items))}`);
+  } catch(e) {}
+}
+
+// ─── PRINT SURAT PENGIRIMAN ──────────────────────────────────────────────────
+function printSurat(r) {
+  const tgl = r.tglKirim
+    ? new Date(r.tglKirim).toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' })
+    : '________________';
+
+  const html = `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Surat Pengiriman - ${r.receipt}</title>
+<style>
+  @page { size: A4; margin: 2.5cm; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; color: #000; line-height: 1.6; }
+  .header { text-align: center; margin-bottom: 30px; }
+  .header h2 { font-size: 14pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+  .header h3 { font-size: 13pt; font-weight: bold; text-transform: uppercase; margin-top: 4px; }
+  .divider { border-top: 3px double #000; margin: 10px 0; }
+  .info-table { width: 100%; margin: 24px 0; border-collapse: collapse; }
+  .info-table td { padding: 5px 0; font-size: 12pt; vertical-align: top; }
+  .info-table td:first-child { width: 180px; font-weight: normal; }
+  .info-table td:nth-child(2) { width: 20px; text-align: center; }
+  .body-text { text-align: justify; margin: 20px 0; font-size: 12pt; line-height: 1.8; }
+  .ttd-section { display: flex; justify-content: space-between; margin-top: 50px; }
+  .ttd-block { text-align: center; width: 30%; }
+  .ttd-block .label { font-size: 12pt; margin-bottom: 60px; }
+  .ttd-block .name { font-size: 12pt; text-decoration: underline; font-weight: bold; }
+  @media print { body { -webkit-print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <h2>Surat Keterangan</h2>
+  <h3>Pengiriman Ekspedisi</h3>
+</div>
+<div class="divider"></div>
+
+<table class="info-table">
+  <tr>
+    <td>Nama Customer</td>
+    <td>:</td>
+    <td><strong>${r.customer || '________________'}</strong></td>
+  </tr>
+  <tr>
+    <td>Alamat Pengiriman</td>
+    <td>:</td>
+    <td>${r.alamat || '________________'}</td>
+  </tr>
+  <tr>
+    <td>Nomor Receipt</td>
+    <td>:</td>
+    <td>${r.receipt || '________________'}</td>
+  </tr>
+  <tr>
+    <td>Biaya Pengiriman</td>
+    <td>:</td>
+    <td>${r.biaya ? 'Rp ' + Number(r.biaya.toString().replace(/[^0-9]/g,'')).toLocaleString('id-ID') : '________________'}</td>
+  </tr>
+</table>
+
+<p class="body-text">
+  Dengan ini kami menerangkan bahwa sehubungan pengiriman barang Bapak / Ibu ke alamat di atas
+  dan telah menunjuk atau mempercayakan kepada Ekspedisi HAMENG untuk melakukan pengiriman tersebut,
+  maka setiap kerusakan barang yang terjadi setelah dilakukan serah terima dari INFORMA kepada
+  Pihak Ekspedisi akan menjadi tanggung jawab Pihak Ekspedisi dengan Bapak / Ibu sepenuhnya.
+</p>
+<p class="body-text">
+  Demikian surat keterangan ini di buat dan untuk di pergunakan dengan sebaik baiknya.
+</p>
+
+<br>
+<p style="text-align:left; margin-top: 20px;">Magelang, ${tgl}</p>
+
+<div class="ttd-section">
+  <div class="ttd-block">
+    <div class="label">Hormat Kami</div>
+    <div class="name">${r.smt || '________________'}</div>
+  </div>
+  <div class="ttd-block">
+    <div class="label">Menyetujui</div>
+    <div class="name">${r.customer || '________________'}</div>
+  </div>
+  <div class="ttd-block">
+    <div class="label">Ekspedisi</div>
+    <div class="name">HAMENG</div>
+  </div>
+</div>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  // Tunggu sebentar lalu auto-print
+  win.onload = function() { win.focus(); win.print(); };
+}
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+function getHLevel(dateStr) {
+  if (!dateStr) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const tgl = new Date(dateStr); tgl.setHours(0,0,0,0);
+  const diff = Math.round((tgl - today) / (1000 * 60 * 60 * 24));
+  if (diff >= 0 && diff <= 3) return diff; // 0 = hari ini, 1-3 = H+n
+  return null;
+}
+
+// Parse tanggal dari Google Sheets: bisa ISO string, Date object, atau string biasa
+function parseSheetDate(val) {
+  if (!val) return '';
+  if (val instanceof Date) return val.toISOString().split('T')[0];
+  const s = String(val);
+  // ISO format: 2026-03-08T17:00:00.000Z → ambil bagian tanggal saja, koreksi timezone WIB (+7)
+  if (s.includes('T')) {
+    const d = new Date(s);
+    // Tambah 7 jam untuk WIB agar tanggal tidak mundur 1 hari
+    d.setHours(d.getHours() + 7);
+    return d.toISOString().split('T')[0];
+  }
+  return s.slice(0, 10); // YYYY-MM-DD
+}
+
+function formatDate(d) {
+  if (!d) return '—';
+  try {
+    // Pastikan parse sebagai local date bukan UTC
+    const parts = String(d).slice(0,10).split('-');
+    if (parts.length === 3) {
+      const dt = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+      return dt.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
+    }
+    return new Date(d).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
+  } catch { return String(d); }
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function updateBadge(id, count) {
+  const el = document.getElementById('badge-' + id);
+  if (el) el.textContent = count || '0';
+}
+
+function clearFilters(prefix) {
+  const els = [`${prefix}-search`,`${prefix}-status`,`${prefix}-date`,`${prefix}-reminder`];
+  els.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  if (prefix === 'fp') renderFP();
+  if (prefix === 'xpdc') renderXPDC();
+  if (prefix === 'rthub') renderRTHUB();
+}
+
+function fpBadge(s) {
+  const map = {
+    'Sudah Diterima Cust': 'diterima',
+    'Pindah Request Date': 'pindah',
+    'Indent': 'indent',
+    'Fisik masih di DC': 'dc',
+    'Other': 'other'
+  };
+  return `<span class="badge ${map[s] || 'other'}">${s || 'Other'}</span>`;
+}
+
+function shipBadge(s) {
+  const map = {
+    'Pending':'pending', 'Packing':'packing', 'Siap Kirim':'siap',
+    'Dalam Pengiriman':'kirim', 'Selesai':'selesai', 'Cancelled':'cancelled'
+  };
+  return `<span class="badge ${map[s] || 'pending'}">${s || 'Pending'}</span>`;
+}
+
+function notify(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `notif ${type}`;
+  el.textContent = msg;
+  document.getElementById('notifications').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+</script>
+</body>
+</html>
