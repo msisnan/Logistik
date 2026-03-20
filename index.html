@@ -678,7 +678,7 @@
 
       <div class="form-group">
         <label class="form-label">Nomor Receipt <span class="required">*</span></label>
-        <input class="form-input" id="xpdc-receipt" type="text" placeholder="Contoh: XPDC-001">
+        <input class="form-input" id="xpdc-receipt" type="text" placeholder="Receipt UBM / BM">
       </div>
       <div class="form-group">
         <label class="form-label">Nama Customer <span class="required">*</span></label>
@@ -701,23 +701,23 @@
         <input type="hidden" id="xpdc-status-val">
       </div>
       <div class="form-group">
-        <label class="form-label">Qty / Jumlah Koli</label>
+        <label class="form-label">Qty / Jumlah Koli <span class="required">*</span></label>
         <input class="form-input" id="xpdc-qty" type="number" min="1" placeholder="Jumlah koli/barang">
       </div>
       <div class="form-group">
-        <label class="form-label">Note</label>
+        <label class="form-label">Note <span class="required">*</span></label>
         <textarea class="form-input" id="xpdc-note" placeholder="Catatan tambahan..."></textarea>
       </div>
       <div class="form-group">
-        <label class="form-label">Alamat Pengiriman</label>
+        <label class="form-label">Alamat Pengiriman <span class="required">*</span></label>
         <textarea class="form-input" id="xpdc-alamat" rows="2" placeholder="Alamat lengkap pengiriman..."></textarea>
       </div>
       <div class="form-group">
-        <label class="form-label">Biaya Pengiriman</label>
-        <input class="form-input" id="xpdc-biaya" type="text" placeholder="Contoh: Rp 150.000">
+        <label class="form-label">Biaya Pengiriman <span class="required">*</span></label>
+        <input class="form-input" id="xpdc-biaya" type="number" min="10000" placeholder="Min. 5 digit, contoh: 50000">
       </div>
       <div class="form-group">
-        <label class="form-label">SMT</label>
+        <label class="form-label">SMT <span class="required">*</span></label>
         <input class="form-input" id="xpdc-smt" type="text" placeholder="Nama SMT...">
       </div>
       <button class="btn-submit" onclick="submitShip('xpdc')">
@@ -739,7 +739,7 @@
 
       <div class="form-group">
         <label class="form-label">Nomor Receipt <span class="required">*</span></label>
-        <input class="form-input" id="rthub-receipt" type="text" placeholder="Contoh: RT-001">
+        <input class="form-input" id="rthub-receipt" type="text" placeholder="Receipt UBM / BM">
       </div>
       <div class="form-group">
         <label class="form-label">Nama Customer <span class="required">*</span></label>
@@ -762,11 +762,11 @@
         <input type="hidden" id="rthub-status-val">
       </div>
       <div class="form-group">
-        <label class="form-label">Qty / Jumlah Koli</label>
+        <label class="form-label">Qty / Jumlah Koli <span class="required">*</span></label>
         <input class="form-input" id="rthub-qty" type="number" min="1" placeholder="Jumlah koli/barang">
       </div>
       <div class="form-group">
-        <label class="form-label">Note</label>
+        <label class="form-label">Note <span class="required">*</span></label>
         <textarea class="form-input" id="rthub-note" placeholder="Catatan tambahan..."></textarea>
       </div>
       <button class="btn-submit" onclick="submitShip('rthub')">
@@ -833,7 +833,7 @@
 <script>
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
 // ── KONFIGURASI — isi URL Apps Script kamu di sini ──────────────────────────
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzrUZBejNUGKsRtpmg6GBt8haVE8hWmLC7B-vqWXEUV2vIZZCb9UrNo9vZ2AJub3Cd3Rw/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyxdisokFawCqR8QsaWlVnT6DfwbY5sGPTXu4IgSciH8zRWfwc34ulwQCa7UiVRMNXe/exec';
 // ─────────────────────────────────────────────────────────────────────────────
 
 let CFG = {
@@ -1314,12 +1314,34 @@ function escQ(s) {
 
 async function submitShip(prefix) {
   const sheetName = CFG[prefix];
+
+  // Validasi field umum
   if (!validate([
     [`${prefix}-receipt`,'Nomor Receipt'],
     [`${prefix}-customer`,'Nama Customer'],
     [`${prefix}-tglkirim`,'Tanggal Pengiriman'],
-    [`${prefix}-status-val`,'Status']
+    [`${prefix}-status-val`,'Status'],
+    [`${prefix}-qty`,'Qty / Jumlah Koli'],
+    [`${prefix}-note`,'Note'],
   ])) return;
+
+  // Validasi tambahan khusus XPDC
+  if (prefix === 'xpdc') {
+    if (!validate([
+      ['xpdc-alamat','Alamat Pengiriman'],
+      ['xpdc-smt','SMT'],
+    ])) return;
+
+    // Validasi biaya minimum 5 digit
+    const biaya = document.getElementById('xpdc-biaya').value.trim();
+    if (!biaya) { alert('⚠ Biaya Pengiriman wajib diisi'); document.getElementById('xpdc-biaya').focus(); return; }
+    const biayaNum = parseInt(biaya.replace(/[^0-9]/g,''));
+    if (isNaN(biayaNum) || biayaNum < 10000) {
+      alert('⚠ Biaya Pengiriman minimal 5 digit (contoh: 50000 untuk Rp 50.000)');
+      document.getElementById('xpdc-biaya').focus();
+      return;
+    }
+  }
 
   let row = [
     document.getElementById(`${prefix}-receipt`).value.trim(),
