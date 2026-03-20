@@ -34,7 +34,7 @@
   /* HEADER */
   .header {
     background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
-    padding: 20px 20px 28px;
+    padding: 14px 16px 16px;
     color: white;
     position: relative;
     overflow: hidden;
@@ -43,31 +43,84 @@
     content: '';
     position: absolute;
     top: -30px; right: -30px;
-    width: 120px; height: 120px;
-    background: rgba(255,255,255,0.08);
+    width: 110px; height: 110px;
+    background: rgba(255,255,255,0.07);
     border-radius: 50%;
   }
   .header::after {
     content: '';
     position: absolute;
     bottom: -20px; left: 40px;
-    width: 80px; height: 80px;
+    width: 70px; height: 70px;
     background: rgba(255,255,255,0.05);
     border-radius: 50%;
   }
-  .header-title {
-    font-size: 20px;
-    font-weight: 700;
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     position: relative;
     z-index: 1;
+  }
+  .header-title {
+    font-size: 18px;
+    font-weight: 700;
   }
   .header-sub {
-    font-size: 13px;
+    font-size: 11px;
     opacity: 0.8;
-    margin-top: 4px;
+    margin-top: 2px;
+  }
+  .header-clock-box {
+    background: rgba(255,255,255,0.13);
+    border-radius: 10px;
+    padding: 6px 11px;
+    text-align: right;
+    min-width: 105px;
+  }
+  .header-clock {
+    font-size: 17px;
+    font-weight: 700;
+    font-family: monospace;
+    letter-spacing: 1px;
+  }
+  .header-sholat-next {
+    font-size: 9px;
+    opacity: 0.85;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 3px;
+  }
+  .sholat-pulse {
+    width: 5px; height: 5px;
+    background: #a8f0c6;
+    border-radius: 50%;
+    animation: spulse 1.5s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .sholat-bar {
+    display: flex;
+    gap: 5px;
+    margin-top: 10px;
     position: relative;
     z-index: 1;
   }
+  .sholat-pill {
+    flex: 1;
+    background: rgba(255,255,255,0.11);
+    border-radius: 7px;
+    padding: 4px 2px;
+    text-align: center;
+    min-width: 0;
+  }
+  .sholat-pill.sp-active {
+    background: rgba(255,255,255,0.26);
+  }
+  .sholat-pill .sp-name { font-size: 8.5px; opacity: 0.75; }
+  .sholat-pill .sp-time { font-size: 10px; font-weight: 700; margin-top: 1px; }
 
   /* TABS */
   .tab-bar {
@@ -515,8 +568,26 @@
 </div>
 
 <div class="header">
-  <div class="header-title">📦 Logistik J303</div>
-  <div class="header-sub">Informa Tidar Magelang</div>
+  <div class="header-inner">
+    <div>
+      <div class="header-title">📦 Logistik J303</div>
+      <div class="header-sub">Informa Tidar Magelang</div>
+    </div>
+    <div class="header-clock-box">
+      <div class="header-clock" id="hdr-clock">--:--:--</div>
+      <div class="header-sholat-next">
+        <div class="sholat-pulse"></div>
+        <span id="hdr-next">memuat...</span>
+      </div>
+    </div>
+  </div>
+  <div class="sholat-bar" id="hdr-sholat-bar">
+    <div class="sholat-pill"><div class="sp-name">Subuh</div><div class="sp-time">--:--</div></div>
+    <div class="sholat-pill"><div class="sp-name">Dzuhur</div><div class="sp-time">--:--</div></div>
+    <div class="sholat-pill"><div class="sp-name">Ashar</div><div class="sp-time">--:--</div></div>
+    <div class="sholat-pill"><div class="sp-name">Maghrib</div><div class="sp-time">--:--</div></div>
+    <div class="sholat-pill"><div class="sp-name">Isya</div><div class="sp-time">--:--</div></div>
+  </div>
 </div>
 
 <div class="tab-bar">
@@ -878,7 +949,82 @@ window.onload = () => {
 
   // Load FP data saat halaman dibuka
   loadFPData();
+
+  // Jam digital
+  function tickClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2,'0');
+    const m = String(now.getMinutes()).padStart(2,'0');
+    const s = String(now.getSeconds()).padStart(2,'0');
+    const el = document.getElementById('hdr-clock');
+    if (el) el.textContent = h+':'+m+':'+s;
+  }
+  tickClock();
+  setInterval(tickClock, 1000);
+
+  // Jadwal sholat Magelang (1x per hari, ringan)
+  loadSholatMagelang();
 };
+
+async function loadSholatMagelang() {
+  try {
+    const now = new Date();
+    const d = now.getDate(), mo = now.getMonth()+1, y = now.getFullYear();
+    const url = `https://api.aladhan.com/v1/timings/${d}-${mo}-${y}?latitude=-7.4797&longitude=110.2177&method=20`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    const t = data.data.timings;
+
+    const sholats = [
+      { name:'Subuh',   time: t.Fajr    },
+      { name:'Dzuhur',  time: t.Dhuhr   },
+      { name:'Ashar',   time: t.Asr     },
+      { name:'Maghrib', time: t.Maghrib },
+      { name:'Isya',    time: t.Isha    }
+    ];
+
+    // Cari waktu sholat berikutnya
+    const nowMin = now.getHours()*60 + now.getMinutes();
+    let nextIdx = sholats.findIndex(s => {
+      const [sh, sm] = s.time.split(':').map(Number);
+      return (sh*60 + sm) > nowMin;
+    });
+    if (nextIdx < 0) nextIdx = 0; // sudah lewat Isya → Subuh besok
+
+    // Render bar sholat
+    const bar = document.getElementById('hdr-sholat-bar');
+    if (bar) {
+      bar.innerHTML = sholats.map((s, i) => `
+        <div class="sholat-pill ${i===nextIdx?'sp-active':''}">
+          <div class="sp-name">${s.name}</div>
+          <div class="sp-time">${s.time}</div>
+        </div>`).join('');
+    }
+
+    // Label berikutnya
+    const nextEl = document.getElementById('hdr-next');
+    if (nextEl) nextEl.textContent = sholats[nextIdx].name + ' ' + sholats[nextIdx].time;
+
+    // Update highlight setiap menit
+    setInterval(() => {
+      const n = new Date();
+      const nm = n.getHours()*60 + n.getMinutes();
+      let ni = sholats.findIndex(s => {
+        const [sh, sm] = s.time.split(':').map(Number);
+        return (sh*60+sm) > nm;
+      });
+      if (ni < 0) ni = 0;
+      document.querySelectorAll('#hdr-sholat-bar .sholat-pill').forEach((el,i) => {
+        el.classList.toggle('sp-active', i===ni);
+      });
+      if (nextEl) nextEl.textContent = sholats[ni].name + ' ' + sholats[ni].time;
+    }, 60000);
+
+  } catch(e) {
+    const nextEl = document.getElementById('hdr-next');
+    if (nextEl) nextEl.textContent = 'sholat -';
+  }
+}
 
 function saveConfigMobile() {
   CFG.url  = document.getElementById('m-cfg-url').value.trim();
