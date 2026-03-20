@@ -1147,8 +1147,8 @@ function renderShipPage(prefix, data) {
       const h = getHLevel(r.tglKirim);
       const rowClass = h === 0 ? 'h0-row' : h === 1 ? 'h1-row' : h === 2 ? 'h2-row' : h === 3 ? 'h3-row' : '';
       const printBtn = prefix === 'xpdc'
-        ? `<td style="white-space:nowrap">
-            <button class="btn-print" onclick='printSurat(${JSON.stringify(r)})' style="margin-bottom:4px">🖨 Print</button><br>
+        ? `<td style="white-space:nowrap;display:flex;gap:4px;align-items:center">
+            <button class="btn-print" onclick='printSurat(${JSON.stringify(r)})'>🖨 Print</button>
             ${r.status === 'Selesai'
               ? `<button class="btn-selesai done" disabled>✓ Selesai</button>`
               : `<button class="btn-selesai" onclick='tandaiSelesai(${JSON.stringify(r)}, this)'>✓ Selesai</button>`
