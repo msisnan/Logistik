@@ -1060,7 +1060,8 @@ async function loadXPDC() {
         note:     String(r[5] || '').trim(),
         alamat:   String(r[6] || '').trim(),
         biaya:    String(r[7] || '').trim(),
-        smt:      String(r[8] || '').trim()
+        smt:      String(r[8] || '').trim(),
+        foto:     String(r[9] || '').trim()
       }));
   } catch(e) { DATA.xpdc = getDemoShip('XPDC'); }
   renderXPDC();
@@ -1073,12 +1074,14 @@ async function loadRTHUB() {
     DATA.rthub = rows
       .filter(r => r[0] && String(r[0]).trim() !== '')
       .map(r => ({
+        _rowIndex: r[r.length - 1],
         receipt:  String(r[0]).trim(),
         customer: String(r[1] || '').trim(),
         tglKirim: parseSheetDate(r[2]),
         status:   String(r[3] || 'Pending').trim(),
         qty:      (r[4] !== '' && r[4] !== null && r[4] !== undefined) ? String(r[4]) : '',
-        note:     String(r[5] || '').trim()
+        note:     String(r[5] || '').trim(),
+        foto:     String(r[6] || '').trim()
       }));
   } catch(e) { DATA.rthub = getDemoShip('RTHUB'); }
   renderRTHUB();
@@ -1141,14 +1144,16 @@ function renderShipPage(prefix, data) {
 
   wrapper.innerHTML = `<table>
     <thead><tr>
-      ${thS(prefix,'receipt','Receipt')}${thS(prefix,'customer','Customer')}${thS(prefix,'tglKirim','Tgl Kirim')}${thS(prefix,'','H-')}${thS(prefix,'status','Status')}${thS(prefix,'qty','Qty/Koli')}${thS(prefix,'note','Note')}${prefix==='xpdc'?'<th>Aksi</th>':''}
+      ${thS(prefix,'receipt','Receipt')}${thS(prefix,'customer','Customer')}${thS(prefix,'tglKirim','Tgl Kirim')}${thS(prefix,'','H-')}${thS(prefix,'status','Status')}${thS(prefix,'qty','Qty/Koli')}${thS(prefix,'note','Note')}<th>Foto</th>${(prefix==='xpdc'||prefix==='rthub')?'<th>Aksi</th>':''}
     </tr></thead>
     <tbody>${filtered.map(r => {
       const h = getHLevel(r.tglKirim);
       const rowClass = h === 0 ? 'h0-row' : h === 1 ? 'h1-row' : h === 2 ? 'h2-row' : h === 3 ? 'h3-row' : '';
-      const printBtn = prefix === 'xpdc'
+      const showAksi = prefix === 'xpdc' || prefix === 'rthub';
+      const printBtn = showAksi
         ? `<td style="white-space:nowrap">
-            <button class="btn-print" onclick='printSurat(${JSON.stringify(r)})'>🖨 Print</button>&nbsp;<button ${r.status === 'Selesai' ? 'class="btn-selesai done" disabled' : `class="btn-selesai" onclick='tandaiSelesai(${JSON.stringify(r)}, this)'`}>✓ Selesai</button>
+            ${prefix === 'xpdc' ? `<button class="btn-print" onclick='printSurat(${JSON.stringify(r)})'>🖨 Print</button>&nbsp;` : ''}
+            <button ${r.status === 'Selesai' ? 'class="btn-selesai done" disabled' : `class="btn-selesai" onclick='tandaiSelesaiShip("${prefix}", ${JSON.stringify(r)}, this)'`}>✓ Selesai</button>
           </td>`
         : '';
       return `<tr class="${rowClass}">
@@ -1159,6 +1164,7 @@ function renderShipPage(prefix, data) {
         <td>${shipBadge(r.status)}</td>
         <td style="font-family:var(--mono);font-size:12px;text-align:center">${r.qty}</td>
         <td style="font-size:11px;max-width:150px">${r.note}</td>
+        <td style="text-align:center">${r.foto ? `<a href="${r.foto}" target="_blank" title="Lihat foto" style="font-size:16px;text-decoration:none">📷</a>` : '<span style="color:var(--text3);font-size:11px">—</span>'}</td>
         ${printBtn}
       </tr>`;
     }).join('')}</tbody>
@@ -1327,22 +1333,22 @@ async function sendReminderCheck() {
 }
 
 // ─── TANDAI SELESAI XPDC ─────────────────────────────────────────────────────
-async function tandaiSelesai(r, btn) {
+async function tandaiSelesaiShip(prefix, r, btn) {
   if (!CONFIG.url) { notify('⚠ URL belum dikonfigurasi', 'error'); return; }
-  if (!confirm(`Tandai ${r.receipt} (${r.customer}) sebagai Selesai?`)) return;
+  if (!confirm(`Tandai ${r.customer} sebagai Selesai?`)) return;
 
   btn.disabled = true;
   btn.textContent = '...';
 
   try {
-    // Cari rowIndex dari DATA.xpdc
-    const item = DATA.xpdc.find(x => x.receipt === r.receipt);
+    const dataset   = prefix === 'xpdc' ? DATA.xpdc : DATA.rthub;
+    const sheetName = prefix === 'xpdc' ? CONFIG.sheetXPDC : CONFIG.sheetRTHUB;
+    const item      = dataset.find(x => x.receipt === r.receipt);
     if (!item) throw new Error('Data tidak ditemukan');
 
-    // Update kolom Status (kolom 4 = index 4, 1-based = kolom D)
     const resp = await xhrPost(CONFIG.url, {
       action:   'update',
-      sheet:    CONFIG.sheetXPDC,
+      sheet:    sheetName,
       rowIndex: item._rowIndex,
       col:      4,
       value:    'Selesai'
@@ -1350,15 +1356,12 @@ async function tandaiSelesai(r, btn) {
 
     if (!resp.ok) throw new Error(resp.message);
 
-    // Update local data
     item.status = 'Selesai';
     btn.className = 'btn-selesai done';
     btn.textContent = '✓ Selesai';
     btn.disabled = true;
-    notify(`✅ ${r.receipt} ditandai Selesai`, 'success');
-
-    // Refresh badge
-    updateBadge('xpdc', DATA.xpdc.filter(x => ['Pending','Packing'].includes(x.status)).length);
+    notify(`✅ ${r.customer} ditandai Selesai`, 'success');
+    updateBadge(prefix, dataset.filter(x => ['Pending','Packing'].includes(x.status)).length);
 
   } catch(e) {
     btn.disabled = false;
