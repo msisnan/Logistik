@@ -556,6 +556,38 @@
   }
   .jalur-stat-val { font-size: 22px; font-weight: 700; color: var(--accent); }
   .jalur-stat-lbl { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+  /* ── FOTO UPLOAD ──────────────────────────────────────────────── */
+  .foto-area {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg);
+    position: relative;
+  }
+  .foto-area:active { border-color: var(--accent); background: rgba(79,142,247,0.04); }
+  .foto-area.has-foto { border-style: solid; border-color: var(--green); }
+  .foto-preview {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+    display: none;
+  }
+  .foto-preview.visible { display: block; }
+  .foto-placeholder { color: var(--text3); font-size: 13px; }
+  .foto-placeholder .foto-icon { font-size: 32px; margin-bottom: 8px; }
+  .foto-status { font-size: 12px; color: var(--green); margin-top: 6px; font-weight: 600; }
+  .foto-uploading { font-size: 12px; color: var(--accent); margin-top: 6px; }
+  .btn-retake {
+    background: none; border: 1px solid var(--border); color: var(--text2);
+    border-radius: 8px; padding: 6px 14px; font-size: 12px; font-family: var(--sans);
+    cursor: pointer; margin-top: 8px; display: none;
+  }
+  .btn-retake.visible { display: inline-block; }
 </style>
 </head>
 <body>
@@ -720,6 +752,20 @@
         <label class="form-label">SMT <span class="required">*</span></label>
         <input class="form-input" id="xpdc-smt" type="text" placeholder="Nama SMT...">
       </div>
+      <div class="form-group">
+        <label class="form-label">Foto Barang <span class="required">*</span></label>
+        <input type="file" id="xpdc-foto-input" accept="image/*" capture="environment" style="display:none" onchange="previewFoto('xpdc', this)">
+        <div class="foto-area" id="xpdc-foto-area" onclick="document.getElementById('xpdc-foto-input').click()">
+          <img class="foto-preview" id="xpdc-foto-preview" alt="Preview foto">
+          <div class="foto-placeholder" id="xpdc-foto-placeholder">
+            <div class="foto-icon">📷</div>
+            <div>Tap untuk ambil foto barang</div>
+            <div style="font-size:11px;margin-top:4px;color:var(--text3)">Foto akan otomatis diupload ke Drive</div>
+          </div>
+          <div class="foto-status" id="xpdc-foto-status"></div>
+        </div>
+        <button class="btn-retake" id="xpdc-foto-retake" onclick="retakeFoto('xpdc')">🔄 Ambil ulang foto</button>
+      </div>
       <button class="btn-submit" onclick="submitShip('xpdc')">
         <span>💾</span> Simpan Data
       </button>
@@ -768,6 +814,20 @@
       <div class="form-group">
         <label class="form-label">Note <span class="required">*</span></label>
         <textarea class="form-input" id="rthub-note" placeholder="Catatan tambahan..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Foto Barang <span class="required">*</span></label>
+        <input type="file" id="rthub-foto-input" accept="image/*" capture="environment" style="display:none" onchange="previewFoto('rthub', this)">
+        <div class="foto-area" id="rthub-foto-area" onclick="document.getElementById('rthub-foto-input').click()">
+          <img class="foto-preview" id="rthub-foto-preview" alt="Preview foto">
+          <div class="foto-placeholder" id="rthub-foto-placeholder">
+            <div class="foto-icon">📷</div>
+            <div>Tap untuk ambil foto barang</div>
+            <div style="font-size:11px;margin-top:4px;color:var(--text3)">Foto akan otomatis diupload ke Drive</div>
+          </div>
+          <div class="foto-status" id="rthub-foto-status"></div>
+        </div>
+        <button class="btn-retake" id="rthub-foto-retake" onclick="retakeFoto('rthub')">🔄 Ambil ulang foto</button>
       </div>
       <button class="btn-submit" onclick="submitShip('rthub')">
         <span>💾</span> Simpan Data
@@ -833,7 +893,7 @@
 <script>
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
 // ── KONFIGURASI — isi URL Apps Script kamu di sini ──────────────────────────
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzrUZBejNUGKsRtpmg6GBt8haVE8hWmLC7B-vqWXEUV2vIZZCb9UrNo9vZ2AJub3Cd3Rw/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyxdisokFawCqR8QsaWlVnT6DfwbY5sGPTXu4IgSciH8zRWfwc34ulwQCa7UiVRMNXe/exec';
 // ─────────────────────────────────────────────────────────────────────────────
 
 let CFG = {
@@ -927,6 +987,7 @@ function apiPost(body) {
 }
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
+const FOTO_URL = { xpdc: '', rthub: '' }; // URL foto setelah diupload ke Drive
 let FP_DATA        = [];   // semua rows dari sheet FP
 let CURRENT_PIC    = '';   // PIC SE yang sedang dibuka
 let CURRENT_ROW    = null; // row object yang sedang diberi feedback
@@ -1312,6 +1373,87 @@ function escQ(s) {
   return String(s).replace(/'/g, "\'");
 }
 
+// ─── FOTO FUNCTIONS ──────────────────────────────────────────────────────────
+function previewFoto(prefix, input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    // Tampilkan preview
+    const preview = document.getElementById(prefix + '-foto-preview');
+    const placeholder = document.getElementById(prefix + '-foto-placeholder');
+    const area = document.getElementById(prefix + '-foto-area');
+    const retake = document.getElementById(prefix + '-foto-retake');
+    const status = document.getElementById(prefix + '-foto-status');
+
+    preview.src = e.target.result;
+    preview.classList.add('visible');
+    placeholder.style.display = 'none';
+    area.classList.add('has-foto');
+    retake.classList.add('visible');
+    status.textContent = '';
+    FOTO_URL[prefix] = ''; // reset URL lama
+  };
+  reader.readAsDataURL(file);
+}
+
+function retakeFoto(prefix) {
+  document.getElementById(prefix + '-foto-input').click();
+}
+
+async function uploadFoto(prefix) {
+  const input = document.getElementById(prefix + '-foto-input');
+  if (!input.files || !input.files[0]) return null;
+
+  const receipt  = document.getElementById(prefix + '-receipt').value.trim();
+  const customer = document.getElementById(prefix + '-customer').value.trim();
+  const file     = input.files[0];
+  const status   = document.getElementById(prefix + '-foto-status');
+
+  status.textContent = '⏳ Mengupload foto...';
+  status.style.color = 'var(--accent)';
+
+  // Compress: resize ke max 1200px, kualitas 0.8 (~200KB) — jelas di dashboard
+  const compressed = await compressImage(file, 1200, 0.8);
+  const base64 = compressed.split(',')[1];
+  const mimeType = file.type || 'image/jpeg';
+  const sheet = prefix === 'xpdc' ? CFG.xpdc : CFG.rthub;
+
+  try {
+    const result = await apiPost({
+      action: 'uploadFoto',
+      sheet, receipt, customer,
+      imageBase64: base64,
+      mimeType
+    });
+    if (!result.ok) throw new Error(result.message);
+    FOTO_URL[prefix] = result.url;
+    status.textContent = '✅ Foto berhasil diupload';
+    status.style.color = 'var(--green)';
+    return result.url;
+  } catch(e) {
+    status.textContent = '❌ Gagal upload: ' + e.message;
+    status.style.color = 'var(--red)';
+    throw e;
+  }
+}
+
+function compressImage(file, maxWidth, quality) {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = function() {
+      let w = img.width, h = img.height;
+      if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+      canvas.width = w; canvas.height = h;
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 async function submitShip(prefix) {
   const sheetName = CFG[prefix];
 
@@ -1343,25 +1485,45 @@ async function submitShip(prefix) {
     }
   }
 
-  let row = [
-    document.getElementById(`${prefix}-receipt`).value.trim(),
-    document.getElementById(`${prefix}-customer`).value.trim(),
-    document.getElementById(`${prefix}-tglkirim`).value,
-    document.getElementById(`${prefix}-status-val`).value,
-    document.getElementById(`${prefix}-qty`).value.trim(),
-    document.getElementById(`${prefix}-note`).value.trim()
-  ];
-
-  // XPDC punya 3 kolom tambahan: Alamat, Biaya, SMT
-  if (prefix === 'xpdc') {
-    row.push(
-      document.getElementById('xpdc-alamat').value.trim(),
-      document.getElementById('xpdc-biaya').value.trim(),
-      document.getElementById('xpdc-smt').value.trim()
-    );
+  // Validasi foto wajib
+  const fotoInput = document.getElementById(prefix + '-foto-input');
+  if (!fotoInput.files || !fotoInput.files[0]) {
+    alert('⚠ Foto barang wajib dilampirkan');
+    return;
   }
 
-  await submitRow(sheetName, row, prefix);
+  showLoading(true);
+  try {
+    // Upload foto dulu ke Google Drive
+    const fotoUrl = await uploadFoto(prefix);
+
+    let row = [
+      document.getElementById(`${prefix}-receipt`).value.trim(),
+      document.getElementById(`${prefix}-customer`).value.trim(),
+      document.getElementById(`${prefix}-tglkirim`).value,
+      document.getElementById(`${prefix}-status-val`).value,
+      document.getElementById(`${prefix}-qty`).value.trim(),
+      document.getElementById(`${prefix}-note`).value.trim()
+    ];
+
+    // XPDC punya kolom tambahan: Alamat, Biaya, SMT, URL Foto
+    if (prefix === 'xpdc') {
+      row.push(
+        document.getElementById('xpdc-alamat').value.trim(),
+        document.getElementById('xpdc-biaya').value.trim(),
+        document.getElementById('xpdc-smt').value.trim(),
+        fotoUrl || ''
+      );
+    } else {
+      // RT HUB: tambah kolom foto
+      row.push(fotoUrl || '');
+    }
+
+    await submitRow(sheetName, row, prefix);
+  } catch(e) {
+    showLoading(false);
+    alert('❌ ' + e.message);
+  }
 }
 
 async function submitRow(sheet, row, prefix) {
@@ -1370,7 +1532,6 @@ async function submitRow(sheet, row, prefix) {
     return;
   }
 
-  showLoading(true);
   try {
     const data = await apiPost({ action: 'write', sheet, row });
     if (data.ok) {
