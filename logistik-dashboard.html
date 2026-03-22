@@ -596,6 +596,10 @@
       <span class="nav-icon">🗺</span> Jalur Pengiriman
       <span class="nav-badge ok" id="badge-jalur">—</span>
     </div>
+    <div class="nav-item" id="nav-rdo" onclick="showPage('rdo')">
+      <span class="nav-icon">📋</span> RDO
+      <span class="nav-badge" id="badge-rdo">—</span>
+    </div>
   </div>
 
   <!-- CONTENT -->
@@ -784,6 +788,27 @@
       </div>
     </div>
 
+    <!-- RDO PAGE -->
+    <div id="page-rdo" class="tab-content hidden">
+      <div class="page-header">
+        <div>
+          <div class="page-title">📋 Report Delivery Order</div>
+          <div class="page-sub">Monitor semua trip perjalanan armada</div>
+        </div>
+      </div>
+      <div class="summary-row" id="rdo-summary-cards"></div>
+      <div class="filters">
+        <span class="filter-label">🔍 Filter:</span>
+        <input class="filter-input" id="rdo-search" type="text" placeholder="Cari driver / rute..." oninput="renderRDO()">
+        <input class="filter-input" id="rdo-filter-date" type="date" onchange="renderRDO()">
+        <input class="filter-input" id="rdo-filter-driver" type="text" placeholder="Filter driver..." oninput="renderRDO()">
+        <button class="btn-secondary" onclick="clearRDOFilters()">✕ Reset</button>
+      </div>
+      <div id="rdo-table-wrapper" class="table-wrapper">
+        <div class="loading"><span class="loading-dots">Memuat data</span></div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /main -->
 
@@ -799,7 +824,7 @@ let CONFIG = {
 };
 
 // ─── DATA STORE ─────────────────────────────────────────────────────────────
-let DATA = { fp: [], xpdc: [], rthub: [], jalur: [], jalurHeaders: [] };
+let DATA = { fp: [], xpdc: [], rthub: [], jalur: [], jalurHeaders: [], rdo: [] };
 let SORT = {
   fp:    { col: '', dir: 1 },
   xpdc:  { col: '', dir: 1 },
@@ -860,7 +885,7 @@ async function testConnection() {
 
 // ─── NAVIGATION ──────────────────────────────────────────────────────────────
 function showPage(page) {
-  ['fulfillment','xpdc','rthub','jalur','config'].forEach(p => {
+  ['fulfillment','xpdc','rthub','jalur','rdo','config'].forEach(p => {
     document.getElementById('page-' + p).classList.add('hidden');
     const navEl = document.getElementById('nav-' + p);
     if (navEl) navEl.classList.remove('active');
@@ -870,6 +895,7 @@ function showPage(page) {
   if (navEl) navEl.classList.add('active');
   // Load jalur saat pertama kali dibuka
   if (page === 'jalur' && DATA.jalur.length === 0) loadJalur();
+  if (page === 'rdo'   && DATA.rdo.length   === 0) loadRDO();
 }
 
 // ─── DATA FETCH ──────────────────────────────────────────────────────────────
@@ -1310,6 +1336,257 @@ function clearFiltersJalur() {
   document.getElementById('jalur-driver').value = '';
   document.getElementById('jalur-date-override').value = '';
   renderJalur();
+}
+
+// ─── RDO ─────────────────────────────────────────────────────────────────────
+async function loadRDO() {
+  const wrapper = document.getElementById('rdo-table-wrapper');
+  wrapper.innerHTML = '<div class="loading"><span class="loading-dots">Memuat data RDO</span></div>';
+  try {
+    const rows = await fetchSheet('RDO', 2);
+    DATA.rdo = rows.filter(r => r[0] !== '' || r[2] !== '').map(r => ({
+      id:         String(r[0] || '').trim(),
+      tglInput:   String(r[1] || '').trim(),
+      driver:     String(r[2] || '').trim(),
+      tanggal:    String(r[3] || '').trim(),
+      nokend:     String(r[4] || '').trim(),
+      nopol:      String(r[5] || '').trim(),
+      kmBbmSblm:  String(r[6] || '').trim(),
+      kmBbmSkrg:  String(r[7] || '').trim(),
+      dari:       String(r[8] || '').trim(),
+      tujuan:     String(r[9] || '').trim(),
+      tglBrkt:    String(r[10] || '').trim(),
+      jamBrkt:    String(r[11] || '').trim(),
+      kmBrkt:     String(r[12] || '').trim(),
+      tglTiba:    String(r[13] || '').trim(),
+      jamTiba:    String(r[14] || '').trim(),
+      kmTiba:     String(r[15] || '').trim(),
+      jarakWaktu: String(r[16] || '').trim(),
+      bongkar:    String(r[17] || '').trim(),
+      muat:       String(r[18] || '').trim(),
+      jumlahKM:   String(r[19] || '').trim(),
+      keterangan: String(r[20] || '').trim()
+    }));
+    updateBadge('rdo', DATA.rdo.length);
+    renderRDO();
+  } catch(e) {
+    wrapper.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">${e.message}</div></div>`;
+  }
+}
+
+function renderRDO() {
+  const search = document.getElementById('rdo-search').value.toLowerCase();
+  const date   = document.getElementById('rdo-filter-date').value;
+  const driver = document.getElementById('rdo-filter-driver').value.toLowerCase();
+
+  let data = DATA.rdo.filter(r => {
+    if (search && !r.driver.toLowerCase().includes(search) &&
+        !r.dari.toLowerCase().includes(search) && !r.tujuan.toLowerCase().includes(search) &&
+        !r.keterangan.toLowerCase().includes(search)) return false;
+    if (date   && r.tanggal && !r.tanggal.includes(date)) return false;
+    if (driver && !r.driver.toLowerCase().includes(driver)) return false;
+    return true;
+  });
+
+  // Summary cards
+  const drivers   = [...new Set(DATA.rdo.map(r => r.driver).filter(Boolean))];
+  const totalKM   = DATA.rdo.reduce((s, r) => s + (parseFloat(r.jumlahKM) || 0), 0);
+  const sumEl     = document.getElementById('rdo-summary-cards');
+  sumEl.innerHTML = `
+    <div class="card"><div class="card-label">Total Trip</div><div class="card-value blue">${DATA.rdo.length}</div><div class="card-glow blue"></div></div>
+    <div class="card"><div class="card-label">Total KM</div><div class="card-value green">${totalKM.toLocaleString('id-ID')}</div><div class="card-glow green"></div></div>
+    <div class="card"><div class="card-label">Driver</div><div class="card-value">${drivers.length}</div></div>
+  `;
+
+  const wrapper = document.getElementById('rdo-table-wrapper');
+  if (!data.length) {
+    wrapper.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Tidak ada data RDO</div></div>';
+    return;
+  }
+
+  // Group by driver + tanggal untuk tombol Print per trip
+  wrapper.innerHTML = `<table>
+    <thead><tr>
+      <th>Tanggal</th><th>Driver</th><th>Dari</th><th>Tujuan</th>
+      <th>Berangkat</th><th>Tiba</th><th>KM Brkt</th><th>KM Tiba</th>
+      <th>Jlh KM</th><th>Jarak Waktu</th><th>Keterangan</th><th>PDF</th>
+    </tr></thead>
+    <tbody>${data.map(r => `<tr>
+      <td style="font-family:var(--mono);font-size:11px">${r.tanggal}</td>
+      <td style="color:var(--text);font-weight:500">${escHtml(r.driver)}</td>
+      <td style="font-size:11px">${escHtml(r.dari)}</td>
+      <td style="font-size:11px">${escHtml(r.tujuan)}</td>
+      <td style="font-family:var(--mono);font-size:11px">${r.jamBrkt}</td>
+      <td style="font-family:var(--mono);font-size:11px">${r.jamTiba}</td>
+      <td style="font-family:var(--mono);font-size:11px">${r.kmBrkt}</td>
+      <td style="font-family:var(--mono);font-size:11px">${r.kmTiba}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--accent)">${r.jumlahKM}</td>
+      <td style="font-size:11px">${r.jarakWaktu}</td>
+      <td style="font-size:11px;max-width:120px">${escHtml(r.keterangan)}</td>
+      <td><button class="btn-print" onclick='showRDOPrintModal(${JSON.stringify(r)})'>📄 PDF</button></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function clearRDOFilters() {
+  document.getElementById('rdo-search').value = '';
+  document.getElementById('rdo-filter-date').value = '';
+  document.getElementById('rdo-filter-driver').value = '';
+  renderRDO();
+}
+
+// Modal input harga BBM sebelum generate PDF
+function showRDOPrintModal(r) {
+  const harga = prompt('Harga BBM per liter (Rp):', '10000');
+  if (harga === null) return;
+  const hargaNum = parseInt(harga.replace(/[^0-9]/g,'')) || 0;
+  printRDO(r, hargaNum);
+}
+
+function printRDO(r, hargaBBM) {
+  // Cari semua baris dengan driver + tanggal yang sama untuk 1 trip
+  const tripRows = DATA.rdo.filter(x =>
+    x.driver === r.driver && x.tanggal === r.tanggal
+  );
+
+  const totalKM   = tripRows.reduce((s, x) => s + (parseFloat(x.jumlahKM) || 0), 0);
+  const kmBbmSblm = tripRows[0]?.kmBbmSblm || '';
+  const kmBbmSkrg = tripRows[0]?.kmBbmSkrg || '';
+  const jumlahBBM = (kmBbmSkrg && kmBbmSblm) ? (parseFloat(kmBbmSkrg) - parseFloat(kmBbmSblm)) : 0;
+  const biayaBBM  = jumlahBBM * hargaBBM;
+  const kmPool    = tripRows[tripRows.length-1]?.kmTiba || '';
+
+  // Generate nomor dokumen J303/MM/NNN
+  const now    = new Date();
+  const bulan  = String(now.getMonth()+1).padStart(2,'0');
+  const nomorDoc = `J303/${bulan}/${String(DATA.rdo.indexOf(r)+1).padStart(3,'0')}`;
+
+  const html = `<!DOCTYPE html>
+<html lang="id"><head><meta charset="UTF-8">
+<title>RDO - ${r.driver} - ${r.tanggal}</title>
+<style>
+  @page { size: A4 landscape; margin: 1.5cm; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; }
+  .header-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px; }
+  .logo-area { width:120px; border:1px solid #000; padding:4px; text-align:center; font-weight:bold; font-size:9pt; }
+  .title-area { flex:1; text-align:center; }
+  .title-area h2 { font-size:13pt; font-weight:bold; text-transform:uppercase; }
+  .doc-num { text-align:right; font-size:9pt; }
+  .checklist { display:flex; flex-wrap:wrap; gap:4px 20px; margin:4px 0; font-size:8.5pt; }
+  .checklist span::before { content:'☐ '; }
+  .info-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0; border:1px solid #000; margin:6px 0; }
+  .info-cell { padding:3px 6px; border-right:1px solid #000; border-bottom:1px solid #000; font-size:9pt; }
+  .info-cell:nth-child(3n) { border-right:none; }
+  .info-label { font-weight:bold; }
+  table { width:100%; border-collapse:collapse; margin:6px 0; font-size:8.5pt; }
+  th { background:#e8e8e8; border:1px solid #000; padding:4px 3px; text-align:center; font-weight:bold; }
+  td { border:1px solid #000; padding:3px; text-align:center; }
+  td.left { text-align:left; }
+  .empty-row td { height:16px; }
+  .formula-box { border:1px solid #000; padding:4px 8px; font-size:8.5pt; margin:4px 0; display:inline-block; }
+  .ttd-row { display:flex; justify-content:space-between; margin-top:20px; }
+  .ttd-block { text-align:center; width:30%; }
+  .ttd-block .ttd-label { font-size:8.5pt; margin-bottom:40px; }
+  .ttd-block .ttd-name { font-size:9pt; border-top:1px solid #000; padding-top:4px; }
+  .note { font-size:7.5pt; margin-top:6px; font-style:italic; }
+</style></head><body>
+
+<div class="header-top">
+  <div class="logo-area">Kawan Lama<br>GROUP</div>
+  <div class="title-area">
+    <h2>Form Report Delivery Order (RDO)</h2>
+    <div class="checklist">
+      <span>Aspirasi Hidup Indonesia</span>
+      <span>Kawan Lama Internusa</span>
+      <span>Office Solutions</span>
+      <span>Foods Beverages Indonesia</span>
+      <span>Kawan Lama Sejahtera</span>
+      <span>Toys Games Indonesia</span>
+      <span>Home Center Indonesia</span>
+      <span>Krisbow Indonesia</span>
+      <span>Others: ............</span>
+    </div>
+  </div>
+  <div class="doc-num">Dokumen # :<br><strong>F-SS5.1-01 (00)</strong><br><br>No. ${nomorDoc}</div>
+</div>
+
+<div class="info-grid">
+  <div class="info-cell"><span class="info-label">Site</span> : J303</div>
+  <div class="info-cell"><span class="info-label">KM Isi BBM Sebelumnya</span> : ${kmBbmSblm}</div>
+  <div class="info-cell"><span class="info-label">Jumlah BBM</span> : ${jumlahBBM > 0 ? jumlahBBM : '____'} Liter</div>
+  <div class="info-cell"><span class="info-label">Driver / Co.Driver*</span> : ${r.driver}</div>
+  <div class="info-cell"><span class="info-label">KM Isi BBM Saat Ini</span> : ${kmBbmSkrg}</div>
+  <div class="info-cell"><span class="info-label">KM Tiba di Pool</span> : ${kmPool}</div>
+  <div class="info-cell"><span class="info-label">No. Polisi</span> : ${tripRows[0]?.nopol || 'A 8321 ZA'}</div>
+  <div class="info-cell"><span class="info-label">No. Kendaraan</span> : ${tripRows[0]?.nokend || 'GRANMAX'}</div>
+  <div class="info-cell"></div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th rowspan="2">DARI</th>
+      <th rowspan="2">TUJUAN</th>
+      <th colspan="3">BERANGKAT</th>
+      <th colspan="3">TIBA</th>
+      <th rowspan="2">JAM**<br>BONGKAR</th>
+      <th rowspan="2">MUAT</th>
+      <th rowspan="2">JLH KM</th>
+      <th rowspan="2">KETERANGAN</th>
+    </tr>
+    <tr>
+      <th>TGL</th><th>JAM</th><th>KM</th>
+      <th>TGL</th><th>JAM</th><th>KM</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${tripRows.map(x => `<tr>
+      <td class="left">${x.dari}</td>
+      <td class="left">${x.tujuan}</td>
+      <td>${x.tglBrkt}</td><td>${x.jamBrkt}</td><td>${x.kmBrkt}</td>
+      <td>${x.tglTiba}</td><td>${x.jamTiba}</td><td>${x.kmTiba}</td>
+      <td>${x.bongkar}</td><td>${x.muat}</td>
+      <td><strong>${x.jumlahKM}</strong></td>
+      <td class="left">${x.keterangan}</td>
+    </tr>`).join('')}
+    ${Array(Math.max(0, 8 - tripRows.length)).fill('<tr class="empty-row"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>').join('')}
+  </tbody>
+</table>
+
+<div style="display:flex;gap:20px;margin-top:4px">
+  <div>
+    <div class="formula-box">Ratio = KM Isi BBM Saat Ini - KM Isi BBM Sebelumnya</div><br>
+    <div class="formula-box" style="margin-top:4px">Jumlah BBM Saat Pengisian Terakhir</div>
+  </div>
+  <div>
+    <div class="formula-box">Biaya BBM = Jumlah BBM Terakhir x Harga BBM<br>
+    = ${jumlahBBM} x Rp ${hargaBBM.toLocaleString('id-ID')} = <strong>Rp ${biayaBBM.toLocaleString('id-ID')}</strong></div>
+  </div>
+</div>
+
+<div class="ttd-row">
+  <div class="ttd-block">
+    <div class="ttd-label">Dibuat Oleh,<br>Tgl : ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</div>
+    <div class="ttd-name">${r.driver}<br>Pemohon</div>
+  </div>
+  <div class="ttd-block">
+    <div class="ttd-label">Diperiksa Oleh,<br>Tgl : ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</div>
+    <div class="ttd-name">&nbsp;<br>Atasan Terkait</div>
+  </div>
+  <div class="ttd-block">
+    <div class="ttd-label">Diproses Oleh,<br>Tgl : ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</div>
+    <div class="ttd-name">&nbsp;<br>Chief Cashier / Cashier</div>
+  </div>
+</div>
+
+<div class="note">*Khusus DC, **Diisi bila ada muatan | Note: Lembar 1 untuk Accounting Operations, lembar 2 untuk Chief Cashier, lembar 3 untuk PIC Expediter/GA</div>
+</body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => { win.focus(); win.print(); };
 }
 
 function checkReminders() {
