@@ -1597,10 +1597,11 @@ async function loadJalurMobile() {
     });
     console.log('[Jalur] Parsed rows:', JALUR_DATA.length, '| Headers:', JALUR_HEADERS);
 
-    const wib = new Date(new Date().getTime() + 7*60*60*1000);
-    const tglHariIni = wib.getUTCDate() + '/' + (wib.getUTCMonth()+1) + '/' + wib.getUTCFullYear();
+    const wib   = new Date(new Date().getTime() + 7*60*60*1000);
+    const besok = new Date(wib.getTime() + 24*60*60*1000);
+    const tglBesok = besok.getUTCDate() + '/' + (besok.getUTCMonth()+1) + '/' + besok.getUTCFullYear();
     document.getElementById('jalur-m-sub').textContent =
-      `Jalur Hari Ini (${tglHariIni}) — ${JALUR_DATA.length} pengiriman`;
+      `Jalur Besok (${tglBesok}) — ${JALUR_DATA.length} pengiriman`;
 
     renderJalurMobile();
   } catch(e) {
