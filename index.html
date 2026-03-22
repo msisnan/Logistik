@@ -588,6 +588,69 @@
     cursor: pointer; margin-top: 8px; display: none;
   }
   .btn-retake.visible { display: inline-block; }
+
+  /* ── RDO ──────────────────────────────────────────────────────── */
+  .rdo-trip-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .rdo-trip-header {
+    background: rgba(79,142,247,0.08);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .rdo-trip-num { font-size: 12px; font-weight: 700; color: var(--accent); }
+  .rdo-trip-route { font-size: 12px; color: var(--text2); }
+  .rdo-trip-km { font-size: 11px; font-family: monospace; color: var(--text3); }
+  .rdo-fields { padding: 14px; }
+  .rdo-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .rdo-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .rdo-field-label { font-size: 10px; font-weight: 600; color: var(--text2); margin-bottom: 4px; letter-spacing: 0.3px; }
+  .rdo-input {
+    width: 100%; padding: 10px 12px;
+    background: var(--bg); border: 1.5px solid var(--border);
+    border-radius: 8px; font-size: 14px; font-family: var(--sans);
+    color: var(--text); outline: none; transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  .rdo-input:focus { border-color: var(--accent); background: white; }
+  .rdo-section-title {
+    font-size: 10px; font-weight: 700; color: var(--text3);
+    letter-spacing: 1.5px; text-transform: uppercase;
+    margin-bottom: 8px; margin-top: 4px;
+  }
+  .rdo-divider { border: none; border-top: 1px dashed var(--border); margin: 12px 0; }
+  .btn-add-baris {
+    width: 100%; padding: 12px;
+    background: rgba(79,142,247,0.06);
+    border: 1.5px dashed var(--accent);
+    border-radius: 10px; color: var(--accent);
+    font-size: 13px; font-weight: 600;
+    font-family: var(--sans); cursor: pointer;
+    margin-bottom: 12px; transition: all 0.15s;
+  }
+  .btn-add-baris:active { background: rgba(79,142,247,0.12); }
+  .btn-del-baris {
+    background: none; border: none; color: var(--red);
+    font-size: 18px; cursor: pointer; padding: 4px;
+    line-height: 1;
+  }
+  .rdo-summary {
+    background: rgba(46,204,138,0.06);
+    border: 1px solid rgba(46,204,138,0.2);
+    border-radius: 10px; padding: 12px 14px;
+    margin-bottom: 14px; font-size: 12px;
+  }
+  .rdo-summary-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .rdo-summary-label { color: var(--text2); }
+  .rdo-summary-val { font-weight: 700; color: var(--text); font-family: monospace; }
 </style>
 </head>
 <body>
@@ -627,6 +690,7 @@
   <button class="tab-btn" onclick="switchTab('xpdc')">🚚 XPDC</button>
   <button class="tab-btn" onclick="switchTab('rthub')">🏭 RT HUB</button>
   <button class="tab-btn" onclick="switchTab('jalur')">🗺 Jalur</button>
+  <button class="tab-btn" onclick="switchTab('rdo')">📋 RDO</button>
   <!-- tab Setting disembunyikan — URL sudah dikonfigurasi oleh admin -->
 </div>
 
@@ -885,6 +949,74 @@
         <div class="fp-spinner"></div>
         <div>Memuat jalur hari ini...</div>
       </div>
+    </div>
+  </div>
+
+  <!-- RDO TAB -->
+  <div id="tab-rdo" class="tab-content">
+    <div style="padding:14px 0 10px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--text)">📋 Report Delivery Order</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Input per baris perjalanan</div>
+      </div>
+      <button class="fp-refresh-btn" onclick="resetRDO()" title="Reset form">✕</button>
+    </div>
+
+    <!-- Header Info -->
+    <div class="card" style="margin-bottom:12px">
+      <div class="rdo-section-title">Informasi Driver & Kendaraan</div>
+      <div class="rdo-row">
+        <div>
+          <div class="rdo-field-label">Nama Driver <span class="required">*</span></div>
+          <input class="rdo-input" id="rdo-driver" type="text" placeholder="Nama lengkap driver">
+        </div>
+        <div>
+          <div class="rdo-field-label">Tanggal Trip <span class="required">*</span></div>
+          <input class="rdo-input" id="rdo-tanggal" type="date">
+        </div>
+      </div>
+      <div class="rdo-row">
+        <div>
+          <div class="rdo-field-label">No. Kendaraan</div>
+          <input class="rdo-input" id="rdo-nokend" type="text" value="GRANMAX" placeholder="GRANMAX">
+        </div>
+        <div>
+          <div class="rdo-field-label">No. Polisi</div>
+          <input class="rdo-input" id="rdo-nopol" type="text" value="A 8321 ZA" placeholder="A 8321 ZA">
+        </div>
+      </div>
+      <div class="rdo-row">
+        <div>
+          <div class="rdo-field-label">KM BBM Sebelumnya</div>
+          <input class="rdo-input" id="rdo-km-bbm-sblm" type="number" placeholder="Contoh: 285038">
+        </div>
+        <div>
+          <div class="rdo-field-label">KM BBM Saat Ini</div>
+          <input class="rdo-input" id="rdo-km-bbm-skrg" type="number" placeholder="Contoh: 285058">
+        </div>
+      </div>
+    </div>
+
+    <!-- Baris Perjalanan -->
+    <div id="rdo-baris-list"></div>
+    <button class="btn-add-baris" onclick="tambahBaris()">+ Tambah Baris Perjalanan</button>
+
+    <!-- Summary -->
+    <div class="rdo-summary" id="rdo-summary" style="display:none">
+      <div class="rdo-summary-row"><span class="rdo-summary-label">Total KM</span><span class="rdo-summary-val" id="rdo-total-km">0</span></div>
+      <div class="rdo-summary-row"><span class="rdo-summary-label">Jumlah BBM</span><span class="rdo-summary-val" id="rdo-jumlah-bbm">0 Liter</span></div>
+      <div class="rdo-summary-row"><span class="rdo-summary-label">KM Tiba di Pool</span><span class="rdo-summary-val" id="rdo-km-pool">—</span></div>
+    </div>
+
+    <button class="btn-submit" onclick="submitRDO()" id="rdo-submit-btn">
+      <span>💾</span> Simpan Semua Perjalanan
+    </button>
+
+    <div id="rdo-success" style="display:none;text-align:center;padding:32px 16px">
+      <div class="success-icon" style="margin:0 auto 12px">✓</div>
+      <div class="success-title">RDO Tersimpan!</div>
+      <div class="success-sub" id="rdo-success-msg"></div>
+      <button class="btn-back" onclick="resetRDO()">+ Input Trip Baru</button>
     </div>
   </div>
 
@@ -1680,6 +1812,222 @@ function switchTab(name) {
     console.log('[switchTab] Loading jalur...');
     loadJalurMobile();
   }
+  // Init RDO
+  if (name === 'rdo') initRDO();
+}
+
+// ─── RDO FUNCTIONS ───────────────────────────────────────────────────────────
+let RDO_BARIS = []; // array baris perjalanan
+let RDO_COUNTER = 0;
+
+// Init RDO saat tab dibuka
+function initRDO() {
+  if (RDO_BARIS.length === 0) tambahBaris();
+  const today = new Date().toISOString().split('T')[0];
+  const tgl = document.getElementById('rdo-tanggal');
+  if (tgl && !tgl.value) tgl.value = today;
+}
+
+function tambahBaris() {
+  RDO_COUNTER++;
+  const id = RDO_COUNTER;
+  RDO_BARIS.push(id);
+
+  const list = document.getElementById('rdo-baris-list');
+  const div = document.createElement('div');
+  div.className = 'rdo-trip-card';
+  div.id = 'rdo-baris-' + id;
+  div.innerHTML = `
+    <div class="rdo-trip-header">
+      <span class="rdo-trip-num">Baris ${id}</span>
+      <button class="btn-del-baris" onclick="hapusBaris(${id})" title="Hapus baris">×</button>
+    </div>
+    <div class="rdo-fields">
+      <div class="rdo-row">
+        <div>
+          <div class="rdo-field-label">Dari <span class="required">*</span></div>
+          <input class="rdo-input" id="rdo-dari-${id}" type="text" placeholder="Contoh: STORE" oninput="updateSummary()">
+        </div>
+        <div>
+          <div class="rdo-field-label">Tujuan <span class="required">*</span></div>
+          <input class="rdo-input" id="rdo-tujuan-${id}" type="text" placeholder="Contoh: TEMANGGUNG" oninput="updateSummary()">
+        </div>
+      </div>
+      <div class="rdo-section-title">Berangkat</div>
+      <div class="rdo-row-3">
+        <div>
+          <div class="rdo-field-label">Tgl</div>
+          <input class="rdo-input" id="rdo-tgl-brkt-${id}" type="date" oninput="updateSummary()">
+        </div>
+        <div>
+          <div class="rdo-field-label">Jam</div>
+          <input class="rdo-input" id="rdo-jam-brkt-${id}" type="time" oninput="updateSummary()">
+        </div>
+        <div>
+          <div class="rdo-field-label">KM</div>
+          <input class="rdo-input" id="rdo-km-brkt-${id}" type="number" placeholder="KM" oninput="updateSummary()">
+        </div>
+      </div>
+      <div class="rdo-section-title">Tiba</div>
+      <div class="rdo-row-3">
+        <div>
+          <div class="rdo-field-label">Tgl</div>
+          <input class="rdo-input" id="rdo-tgl-tiba-${id}" type="date" oninput="updateSummary()">
+        </div>
+        <div>
+          <div class="rdo-field-label">Jam</div>
+          <input class="rdo-input" id="rdo-jam-tiba-${id}" type="time" oninput="updateSummary()">
+        </div>
+        <div>
+          <div class="rdo-field-label">KM</div>
+          <input class="rdo-input" id="rdo-km-tiba-${id}" type="number" placeholder="KM" oninput="updateSummary()">
+        </div>
+      </div>
+      <div class="rdo-row">
+        <div>
+          <div class="rdo-field-label">Jam Bongkar</div>
+          <input class="rdo-input" id="rdo-bongkar-${id}" type="time">
+        </div>
+        <div>
+          <div class="rdo-field-label">Jam Muat</div>
+          <input class="rdo-input" id="rdo-muat-${id}" type="time">
+        </div>
+      </div>
+      <div>
+        <div class="rdo-field-label">Keterangan</div>
+        <input class="rdo-input" id="rdo-ket-${id}" type="text" placeholder="No. Receipt / ISI BBM / dll">
+      </div>
+    </div>`;
+
+  list.appendChild(div);
+  // Set tanggal default dari header
+  const tglHeader = document.getElementById('rdo-tanggal').value;
+  if (tglHeader) {
+    document.getElementById('rdo-tgl-brkt-' + id).value = tglHeader;
+    document.getElementById('rdo-tgl-tiba-' + id).value = tglHeader;
+  }
+  updateSummary();
+}
+
+function hapusBaris(id) {
+  if (RDO_BARIS.length <= 1) { alert('Minimal 1 baris perjalanan'); return; }
+  RDO_BARIS = RDO_BARIS.filter(b => b !== id);
+  const el = document.getElementById('rdo-baris-' + id);
+  if (el) el.remove();
+  updateSummary();
+}
+
+function hitungJarakWaktu(tglBrkt, jamBrkt, tglTiba, jamTiba) {
+  if (!tglBrkt || !jamBrkt || !tglTiba || !jamTiba) return '';
+  try {
+    const start = new Date(tglBrkt + 'T' + jamBrkt);
+    const end   = new Date(tglTiba + 'T' + jamTiba);
+    const diffMs = end - start;
+    if (diffMs < 0) return '';
+    const h = Math.floor(diffMs / 3600000);
+    const m = Math.floor((diffMs % 3600000) / 60000);
+    if (h > 0) return h + ' jam ' + m + ' menit';
+    return m + ' menit';
+  } catch(e) { return ''; }
+}
+
+function updateSummary() {
+  let totalKM = 0;
+  let kmPool  = '';
+  RDO_BARIS.forEach(id => {
+    const kmBrkt = parseFloat(document.getElementById('rdo-km-brkt-' + id)?.value) || 0;
+    const kmTiba = parseFloat(document.getElementById('rdo-km-tiba-' + id)?.value) || 0;
+    if (kmTiba > kmBrkt) totalKM += (kmTiba - kmBrkt);
+    if (kmTiba > 0) kmPool = kmTiba;
+  });
+
+  const kmBbmSblm = parseFloat(document.getElementById('rdo-km-bbm-sblm')?.value) || 0;
+  const kmBbmSkrg = parseFloat(document.getElementById('rdo-km-bbm-skrg')?.value) || 0;
+  const jumlahBBM = kmBbmSkrg > kmBbmSblm ? (kmBbmSkrg - kmBbmSblm) : 0;
+
+  const summaryEl = document.getElementById('rdo-summary');
+  if (totalKM > 0 || jumlahBBM > 0) {
+    summaryEl.style.display = 'block';
+    document.getElementById('rdo-total-km').textContent = totalKM + ' KM';
+    document.getElementById('rdo-jumlah-bbm').textContent = jumlahBBM > 0 ? jumlahBBM + ' Liter' : '—';
+    document.getElementById('rdo-km-pool').textContent = kmPool || '—';
+  }
+}
+
+async function submitRDO() {
+  // Validasi header
+  const driver  = document.getElementById('rdo-driver').value.trim();
+  const tanggal = document.getElementById('rdo-tanggal').value;
+  if (!driver)  { alert('⚠ Nama Driver wajib diisi'); return; }
+  if (!tanggal) { alert('⚠ Tanggal wajib diisi'); return; }
+
+  // Kumpulkan semua baris
+  const rows = [];
+  for (const id of RDO_BARIS) {
+    const dari     = document.getElementById('rdo-dari-' + id)?.value.trim();
+    const tujuan   = document.getElementById('rdo-tujuan-' + id)?.value.trim();
+    const tglBrkt  = document.getElementById('rdo-tgl-brkt-' + id)?.value;
+    const jamBrkt  = document.getElementById('rdo-jam-brkt-' + id)?.value;
+    const kmBrkt   = document.getElementById('rdo-km-brkt-' + id)?.value;
+    const tglTiba  = document.getElementById('rdo-tgl-tiba-' + id)?.value;
+    const jamTiba  = document.getElementById('rdo-jam-tiba-' + id)?.value;
+    const kmTiba   = document.getElementById('rdo-km-tiba-' + id)?.value;
+    const bongkar  = document.getElementById('rdo-bongkar-' + id)?.value;
+    const muat     = document.getElementById('rdo-muat-' + id)?.value;
+    const ket      = document.getElementById('rdo-ket-' + id)?.value.trim();
+
+    if (!dari || !tujuan) { alert(`⚠ Baris ${id}: Dari dan Tujuan wajib diisi`); return; }
+
+    const jarakWaktu = hitungJarakWaktu(tglBrkt, jamBrkt, tglTiba, jamTiba);
+    const jumlahKM   = (kmBrkt && kmTiba) ? (parseFloat(kmTiba) - parseFloat(kmBrkt)) : '';
+
+    rows.push([
+      '', // ID — diisi Apps Script
+      new Date().toLocaleString('id-ID'), // Tanggal Input
+      driver,
+      tanggal,
+      document.getElementById('rdo-nokend').value.trim(),
+      document.getElementById('rdo-nopol').value.trim(),
+      document.getElementById('rdo-km-bbm-sblm').value,
+      document.getElementById('rdo-km-bbm-skrg').value,
+      dari, tujuan,
+      tglBrkt, jamBrkt, kmBrkt,
+      tglTiba, jamTiba, kmTiba,
+      jarakWaktu, bongkar, muat,
+      jumlahKM, ket
+    ]);
+  }
+
+  showLoading(true);
+  try {
+    for (const row of rows) {
+      const result = await apiPost({ action: 'write', sheet: 'RDO', row });
+      if (!result.ok) throw new Error(result.message);
+    }
+    document.getElementById('rdo-submit-btn').style.display = 'none';
+    const successEl = document.getElementById('rdo-success');
+    successEl.style.display = 'block';
+    document.getElementById('rdo-success-msg').textContent =
+      `${rows.length} baris perjalanan berhasil disimpan untuk driver ${driver}`;
+  } catch(e) {
+    alert('❌ Gagal menyimpan: ' + e.message);
+  } finally {
+    showLoading(false);
+  }
+}
+
+function resetRDO() {
+  RDO_BARIS   = [];
+  RDO_COUNTER = 0;
+  document.getElementById('rdo-baris-list').innerHTML = '';
+  document.getElementById('rdo-driver').value  = '';
+  document.getElementById('rdo-tanggal').value = new Date().toISOString().split('T')[0];
+  document.getElementById('rdo-km-bbm-sblm').value = '';
+  document.getElementById('rdo-km-bbm-skrg').value = '';
+  document.getElementById('rdo-summary').style.display = 'none';
+  document.getElementById('rdo-submit-btn').style.display = 'flex';
+  document.getElementById('rdo-success').style.display = 'none';
+  tambahBaris();
 }
 </script>
 </body>
