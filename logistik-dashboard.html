@@ -1526,7 +1526,7 @@ function printRDO(r, hargaBBM, aiEstimasi) {
   .title-area { flex:1; text-align:center; padding-left:16px; }
   .title-area h2 { font-size:13pt; font-weight:bold; text-transform:uppercase; }
   .doc-num { text-align:right; font-size:9pt; }
-  .checklist { display:flex; flex-wrap:wrap; gap:4px 20px; margin:4px 0; font-size:8.5pt; }
+  .checklist { display:grid; grid-template-columns:repeat(3,1fr); gap:3px 8px; margin:6px 0; font-size:8.5pt; text-align:left; }
   .checklist span::before { content:'☐ '; }
   .info-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0; border:1px solid #000; margin:6px 0; }
   .info-cell { padding:3px 6px; border-right:1px solid #000; border-bottom:1px solid #000; font-size:9pt; }
