@@ -1435,31 +1435,82 @@ function clearRDOFilters() {
   renderRDO();
 }
 
-// Modal input harga BBM sebelum generate PDF
-function showRDOPrintModal(r) {
+// Modal input harga BBM + AI estimasi sebelum generate PDF
+async function showRDOPrintModal(r) {
   const harga = prompt('Harga BBM per liter (Rp):', '10000');
   if (harga === null) return;
   const hargaNum = parseInt(harga.replace(/[^0-9]/g,'')) || 0;
-  printRDO(r, hargaNum);
+
+  // Tanya AI untuk estimasi konsumsi BBM
+  notify('🤖 AI sedang menganalisa konsumsi BBM...', 'info');
+  const tripRows = DATA.rdo.filter(x => x.driver === r.driver && x.tanggal === r.tanggal);
+  const totalKM  = tripRows.reduce((s, x) => s + (parseFloat(x.jumlahKM) || 0), 0);
+  const rutes    = tripRows.map(x => x.dari + ' → ' + x.tujuan).join(', ');
+  const kmBbmSblm = tripRows[0]?.kmBbmSblm || 0;
+  const kmBbmSkrg = tripRows[0]?.kmBbmSkrg || 0;
+  const aktualBBM = kmBbmSkrg && kmBbmSblm ? parseFloat(kmBbmSkrg) - parseFloat(kmBbmSblm) : 0;
+
+  let aiEstimasi = '';
+  try {
+    const prompt = `Kamu adalah asisten logistik. Analisa konsumsi BBM kendaraan delivery berikut:
+- Kendaraan: ${tripRows[0]?.nokend || 'GRANMAX'} (No. Pol: ${tripRows[0]?.nopol || 'A 8321 ZA'})
+- Driver: ${r.driver}
+- Tanggal: ${r.tanggal}
+- Rute: ${rutes}
+- Total KM tempuh: ${totalKM} KM
+- BBM terisi (aktual): ${aktualBBM > 0 ? aktualBBM + ' liter' : 'tidak ada pengisian hari ini'}
+- Harga BBM: Rp ${hargaNum.toLocaleString('id-ID')}/liter
+
+Berikan:
+1. Estimasi konsumsi BBM berdasarkan total KM (asumsi Granmax ~10-12 km/liter untuk delivery dalam kota)
+2. Apakah konsumsi aktual (jika ada) wajar atau perlu perhatian?
+3. Estimasi biaya BBM hari ini
+Jawab singkat maksimal 3 kalimat, gunakan Bahasa Indonesia.`;
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await resp.json();
+    aiEstimasi = data.content?.[0]?.text || '';
+  } catch(e) {
+    aiEstimasi = '';
+  }
+
+  printRDO(r, hargaNum, aiEstimasi);
 }
 
-function printRDO(r, hargaBBM) {
+function printRDO(r, hargaBBM, aiEstimasi) {
   // Cari semua baris dengan driver + tanggal yang sama untuk 1 trip
   const tripRows = DATA.rdo.filter(x =>
     x.driver === r.driver && x.tanggal === r.tanggal
   );
 
   const totalKM   = tripRows.reduce((s, x) => s + (parseFloat(x.jumlahKM) || 0), 0);
-  const kmBbmSblm = tripRows[0]?.kmBbmSblm || '';
-  const kmBbmSkrg = tripRows[0]?.kmBbmSkrg || '';
-  const jumlahBBM = (kmBbmSkrg && kmBbmSblm) ? (parseFloat(kmBbmSkrg) - parseFloat(kmBbmSblm)) : 0;
+  const kmBbmSblmRaw = tripRows[0]?.kmBbmSblm || '';
+  const kmBbmSkrgRaw = tripRows[0]?.kmBbmSkrg || '';
+  const kmBbmSblm = kmBbmSblmRaw ? parseFloat(kmBbmSblmRaw).toLocaleString('id-ID') : '';
+  const kmBbmSkrg = kmBbmSkrgRaw ? parseFloat(kmBbmSkrgRaw).toLocaleString('id-ID') : '';
+  const jumlahBBM = (kmBbmSkrgRaw && kmBbmSblmRaw) ? (parseFloat(kmBbmSkrgRaw) - parseFloat(kmBbmSblmRaw)) : 0;
   const biayaBBM  = jumlahBBM * hargaBBM;
-  const kmPool    = tripRows[tripRows.length-1]?.kmTiba || '';
+  const kmPoolRaw = tripRows[tripRows.length-1]?.kmTiba || '';
+  const kmPool    = kmPoolRaw ? parseFloat(kmPoolRaw).toLocaleString('id-ID') : '';
+  const fmtKM = v => v ? parseFloat(String(v).replace(/[^0-9.]/g,'')).toLocaleString('id-ID') : '';
 
   // Generate nomor dokumen J303/MM/NNN
   const now    = new Date();
   const bulan  = String(now.getMonth()+1).padStart(2,'0');
   const nomorDoc = `J303/${bulan}/${String(DATA.rdo.indexOf(r)+1).padStart(3,'0')}`;
+
+  const aiSection = aiEstimasi ? `
+    <div style="border:1px solid #4f8ef7;border-radius:6px;padding:8px 12px;margin:6px 0;background:#f0f4ff;font-size:8.5pt">
+      <strong style="color:#4f8ef7">🤖 Analisa AI:</strong> ${aiEstimasi}
+    </div>` : '';
 
   const html = `<!DOCTYPE html>
 <html lang="id"><head><meta charset="UTF-8">
@@ -1469,7 +1520,9 @@ function printRDO(r, hargaBBM) {
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; }
   .header-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px; }
-  .logo-area { width:120px; border:1px solid #000; padding:4px; text-align:center; font-weight:bold; font-size:9pt; }
+  .logo-area { width:130px; border:2px solid #000; padding:8px 6px; text-align:center; }
+  .logo-kl { font-size:16pt; font-weight:900; letter-spacing:-1px; color:#c8102e; }
+  .logo-sub { font-size:7pt; letter-spacing:3px; color:#333; margin-top:2px; }
   .title-area { flex:1; text-align:center; }
   .title-area h2 { font-size:13pt; font-weight:bold; text-transform:uppercase; }
   .doc-num { text-align:right; font-size:9pt; }
@@ -1482,7 +1535,6 @@ function printRDO(r, hargaBBM) {
   table { width:100%; border-collapse:collapse; margin:6px 0; font-size:8.5pt; }
   th { background:#e8e8e8; border:1px solid #000; padding:4px 3px; text-align:center; font-weight:bold; }
   td { border:1px solid #000; padding:3px; text-align:center; }
-  td.left { text-align:left; }
   .empty-row td { height:16px; }
   .formula-box { border:1px solid #000; padding:4px 8px; font-size:8.5pt; margin:4px 0; display:inline-block; }
   .ttd-row { display:flex; justify-content:space-between; margin-top:20px; }
@@ -1493,7 +1545,7 @@ function printRDO(r, hargaBBM) {
 </style></head><body>
 
 <div class="header-top">
-  <div class="logo-area">Kawan Lama<br>GROUP</div>
+  <div class="logo-area"><div class="logo-kl">KL</div><div class="logo-sub">KAWAN LAMA GROUP</div></div>
   <div class="title-area">
     <h2>Form Report Delivery Order (RDO)</h2>
     <div class="checklist">
@@ -1514,7 +1566,7 @@ function printRDO(r, hargaBBM) {
 <div class="info-grid">
   <div class="info-cell"><span class="info-label">Site</span> : J303</div>
   <div class="info-cell"><span class="info-label">KM Isi BBM Sebelumnya</span> : ${kmBbmSblm}</div>
-  <div class="info-cell"><span class="info-label">Jumlah BBM</span> : ${jumlahBBM > 0 ? jumlahBBM : '____'} Liter</div>
+  <div class="info-cell"><span class="info-label">Jumlah BBM</span> : ${jumlahBBM > 0 ? jumlahBBM.toLocaleString('id-ID') : '____'} Liter</div>
   <div class="info-cell"><span class="info-label">Driver / Co.Driver*</span> : ${r.driver}</div>
   <div class="info-cell"><span class="info-label">KM Isi BBM Saat Ini</span> : ${kmBbmSkrg}</div>
   <div class="info-cell"><span class="info-label">KM Tiba di Pool</span> : ${kmPool}</div>
@@ -1530,7 +1582,7 @@ function printRDO(r, hargaBBM) {
       <th rowspan="2">TUJUAN</th>
       <th colspan="3">BERANGKAT</th>
       <th colspan="3">TIBA</th>
-      <th rowspan="2">JAM**<br>BONGKAR</th>
+      <th rowspan="2">JAM<br>BONGKAR</th>
       <th rowspan="2">MUAT</th>
       <th rowspan="2">JLH KM</th>
       <th rowspan="2">KETERANGAN</th>
@@ -1542,13 +1594,13 @@ function printRDO(r, hargaBBM) {
   </thead>
   <tbody>
     ${tripRows.map(x => `<tr>
-      <td class="left">${x.dari}</td>
-      <td class="left">${x.tujuan}</td>
-      <td>${x.tglBrkt}</td><td>${x.jamBrkt}</td><td>${x.kmBrkt}</td>
-      <td>${x.tglTiba}</td><td>${x.jamTiba}</td><td>${x.kmTiba}</td>
+      <td>${x.dari}</td>
+      <td>${x.tujuan}</td>
+      <td>${x.tglBrkt}</td><td>${x.jamBrkt}</td><td>${fmtKM(x.kmBrkt)}</td>
+      <td>${x.tglTiba}</td><td>${x.jamTiba}</td><td>${fmtKM(x.kmTiba)}</td>
       <td>${x.bongkar}</td><td>${x.muat}</td>
-      <td><strong>${x.jumlahKM}</strong></td>
-      <td class="left">${x.keterangan}</td>
+      <td><strong>${fmtKM(x.jumlahKM)}</strong></td>
+      <td>${x.keterangan}</td>
     </tr>`).join('')}
     ${Array(Math.max(0, 8 - tripRows.length)).fill('<tr class="empty-row"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>').join('')}
   </tbody>
@@ -1563,6 +1615,7 @@ function printRDO(r, hargaBBM) {
     <div class="formula-box">Biaya BBM = Jumlah BBM Terakhir x Harga BBM<br>
     = ${jumlahBBM} x Rp ${hargaBBM.toLocaleString('id-ID')} = <strong>Rp ${biayaBBM.toLocaleString('id-ID')}</strong></div>
   </div>
+  ${aiSection}
 </div>
 
 <div class="ttd-row">
@@ -1665,6 +1718,11 @@ function printSurat(r) {
   const tgl = r.tglKirim
     ? new Date(r.tglKirim).toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' })
     : '________________';
+
+  const aiSection = aiEstimasi ? `
+    <div style="border:1px solid #4f8ef7;border-radius:6px;padding:8px 12px;margin:6px 0;background:#f0f4ff;font-size:8.5pt">
+      <strong style="color:#4f8ef7">🤖 Analisa AI:</strong> ${aiEstimasi}
+    </div>` : '';
 
   const html = `<!DOCTYPE html>
 <html lang="id">
