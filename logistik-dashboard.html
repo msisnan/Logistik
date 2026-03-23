@@ -1719,11 +1719,6 @@ function printSurat(r) {
     ? new Date(r.tglKirim).toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' })
     : '________________';
 
-  const aiSection = aiEstimasi ? `
-    <div style="border:1px solid #4f8ef7;border-radius:6px;padding:8px 12px;margin:6px 0;background:#f0f4ff;font-size:8.5pt">
-      <strong style="color:#4f8ef7">🤖 Analisa AI:</strong> ${aiEstimasi}
-    </div>` : '';
-
   const html = `<!DOCTYPE html>
 <html lang="id">
 <head>
