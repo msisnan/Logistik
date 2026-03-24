@@ -600,6 +600,10 @@
       <span class="nav-icon">📋</span> RDO
       <span class="nav-badge" id="badge-rdo">—</span>
     </div>
+    <div class="nav-item" id="nav-instalasi" onclick="showPage('instalasi')">
+      <span class="nav-icon">🔧</span> Instalasi
+      <span class="nav-badge ok" id="badge-instalasi">—</span>
+    </div>
   </div>
 
   <!-- CONTENT -->
@@ -788,6 +792,28 @@
       </div>
     </div>
 
+    <!-- INSTALASI PAGE -->
+    <div id="page-instalasi" class="tab-content hidden">
+      <div class="page-header">
+        <div>
+          <div class="page-title">🔧 Instalasi</div>
+          <div class="page-sub" id="inst-sub">Jadwal instalasi besok — HCIR Magelang Tidar</div>
+        </div>
+        <div class="header-actions">
+          <input class="filter-input" id="inst-date-override" type="date" onchange="loadInstalasi()" title="Override tanggal">
+        </div>
+      </div>
+      <div class="summary-row" id="inst-summary"></div>
+      <div class="filters">
+        <span class="filter-label">🔍 Filter:</span>
+        <input class="filter-input" id="inst-search" type="text" placeholder="Cari store / customer / no DO..." oninput="renderInstalasi()">
+        <button class="btn-secondary" onclick="clearInstalasiFilters()">✕ Reset</button>
+      </div>
+      <div id="inst-table-wrapper" class="table-wrapper">
+        <div class="loading"><span class="loading-dots">Memuat data</span></div>
+      </div>
+    </div>
+
     <!-- RDO PAGE -->
     <div id="page-rdo" class="tab-content hidden">
       <div class="page-header">
@@ -824,7 +850,7 @@ let CONFIG = {
 };
 
 // ─── DATA STORE ─────────────────────────────────────────────────────────────
-let DATA = { fp: [], xpdc: [], rthub: [], jalur: [], jalurHeaders: [], rdo: [] };
+let DATA = { fp: [], xpdc: [], rthub: [], jalur: [], jalurHeaders: [], rdo: [], instalasi: [], instHeaders: [] };
 let SORT = {
   fp:    { col: '', dir: 1 },
   xpdc:  { col: '', dir: 1 },
@@ -885,7 +911,7 @@ async function testConnection() {
 
 // ─── NAVIGATION ──────────────────────────────────────────────────────────────
 function showPage(page) {
-  ['fulfillment','xpdc','rthub','jalur','rdo','config'].forEach(p => {
+  ['fulfillment','xpdc','rthub','jalur','rdo','instalasi','config'].forEach(p => {
     document.getElementById('page-' + p).classList.add('hidden');
     const navEl = document.getElementById('nav-' + p);
     if (navEl) navEl.classList.remove('active');
@@ -896,6 +922,7 @@ function showPage(page) {
   // Load jalur saat pertama kali dibuka
   if (page === 'jalur' && DATA.jalur.length === 0) loadJalur();
   if (page === 'rdo'   && DATA.rdo.length   === 0) loadRDO();
+  if (page === 'instalasi' && DATA.instalasi.length === 0) loadInstalasi();
 }
 
 // ─── DATA FETCH ──────────────────────────────────────────────────────────────
@@ -1640,6 +1667,94 @@ function printRDO(r, hargaBBM, aiEstimasi) {
   win.document.write(html);
   win.document.close();
   win.onload = () => { win.focus(); win.print(); };
+}
+
+// ─── INSTALASI ────────────────────────────────────────────────────────────────
+async function loadInstalasi() {
+  const wrapper = document.getElementById('inst-table-wrapper');
+  wrapper.innerHTML = '<div class="loading"><span class="loading-dots">Memuat data instalasi</span></div>';
+
+  const dateOverride = document.getElementById('inst-date-override').value;
+  let tanggal = '';
+  if (dateOverride) tanggal = String(parseInt(dateOverride.split('-')[2]));
+
+  try {
+    let url = `${CONFIG.url}?action=instalasi`;
+    if (tanggal) url += `&tanggal=${tanggal}`;
+    const data = await xhrGet(url);
+    if (!data.ok) throw new Error(data.message);
+
+    if (!data.rows || data.rows.length <= 1) {
+      DATA.instalasi = []; DATA.instHeaders = [];
+      wrapper.innerHTML = '<div class="empty"><div class="empty-icon">🔧</div><div class="empty-text">Tidak ada jadwal instalasi untuk besok</div></div>';
+      updateBadge('instalasi', 0);
+      return;
+    }
+
+    DATA.instHeaders = data.rows[0].map(h => String(h));
+    DATA.instalasi   = data.rows.slice(1).map(r => {
+      const obj = {};
+      DATA.instHeaders.forEach((h, i) => { obj[h] = String(r[i] || '').trim(); });
+      return obj;
+    });
+
+    const wib   = new Date(new Date().getTime() + 7*60*60*1000);
+    const besok = new Date(wib.getTime() + 24*60*60*1000);
+    const tgl   = tanggal || String(besok.getUTCDate());
+    document.getElementById('inst-sub').textContent =
+      `Instalasi tgl ${tgl} — ${DATA.instalasi.length} item HCIR Magelang Tidar`;
+
+    updateBadge('instalasi', DATA.instalasi.length);
+    renderInstalasi();
+  } catch(e) {
+    wrapper.innerHTML = `<div class="empty"><div class="empty-icon">⚠</div><div class="empty-text">${e.message}</div></div>`;
+    notify('❌ Instalasi: ' + e.message, 'error');
+  }
+}
+
+function renderInstalasi() {
+  const search = document.getElementById('inst-search').value.toLowerCase();
+  const keyNo       = DATA.instHeaders.find(h => h.toUpperCase() === 'NO') || '';
+  const keyStore    = DATA.instHeaders.find(h => h.toUpperCase().includes('NAMA STORE')) || '';
+  const keyDO       = DATA.instHeaders.find(h => h.toUpperCase().includes('NO DO')) || '';
+  const keyReceipt  = DATA.instHeaders.find(h => h.toUpperCase().includes('NO RECIPT') || h.toUpperCase().includes('NO RECEIPT')) || '';
+  const keyCustomer = DATA.instHeaders.find(h => h.toUpperCase().includes('NAMA CUSTOMER')) || '';
+
+  let data = DATA.instalasi.filter(r => {
+    if (search) return Object.values(r).join(' ').toLowerCase().includes(search);
+    return true;
+  });
+
+  const sumEl = document.getElementById('inst-summary');
+  sumEl.innerHTML = `
+    <div class="card"><div class="card-label">Total Instalasi</div><div class="card-value blue">${DATA.instalasi.length}</div><div class="card-glow blue"></div></div>
+    <div class="card"><div class="card-label">Ditampilkan</div><div class="card-value">${data.length}</div></div>
+  `;
+
+  const wrapper = document.getElementById('inst-table-wrapper');
+  if (!data.length) {
+    wrapper.innerHTML = '<div class="empty"><div class="empty-icon">🔧</div><div class="empty-text">Tidak ada data sesuai filter</div></div>';
+    return;
+  }
+
+  wrapper.innerHTML = `<table>
+    <thead><tr>
+      <th>No</th><th>Nama Store</th><th>No DO</th><th>No Receipt</th><th>Nama Customer</th>
+    </tr></thead>
+    <tbody>${data.map(r => `<tr>
+      <td style="text-align:center;font-family:var(--mono);font-size:11px">${escHtml(r[keyNo] || '')}</td>
+      <td style="font-size:12px">${escHtml(r[keyStore] || '')}</td>
+      <td style="font-family:var(--mono);font-size:11px">${escHtml(r[keyDO] || '')}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--accent)">${escHtml(r[keyReceipt] || '')}</td>
+      <td style="color:var(--text)">${escHtml(r[keyCustomer] || '')}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function clearInstalasiFilters() {
+  document.getElementById('inst-search').value = '';
+  document.getElementById('inst-date-override').value = '';
+  renderInstalasi();
 }
 
 function checkReminders() {
