@@ -691,6 +691,7 @@
   <button class="tab-btn" onclick="switchTab('rthub')">🏭 RT HUB</button>
   <button class="tab-btn" onclick="switchTab('jalur')">🗺 Jalur</button>
   <button class="tab-btn" onclick="switchTab('rdo')">📋 RDO</button>
+  <button class="tab-btn" onclick="switchTab('instalasi')">🔧 Instalasi</button>
   <!-- tab Setting disembunyikan — URL sudah dikonfigurasi oleh admin -->
 </div>
 
@@ -1017,6 +1018,26 @@
       <div class="success-title">RDO Tersimpan!</div>
       <div class="success-sub" id="rdo-success-msg"></div>
       <button class="btn-back" onclick="resetRDO()">+ Input Trip Baru</button>
+    </div>
+  </div>
+
+  <!-- INSTALASI TAB -->
+  <div id="tab-instalasi" class="tab-content">
+    <div class="jalur-header">
+      <div>
+        <div class="jalur-title">🔧 Instalasi</div>
+        <div class="jalur-sub" id="inst-m-sub">Memuat data besok...</div>
+      </div>
+      <button class="fp-refresh-btn" onclick="loadInstalasiMobile()" id="inst-m-refresh">↻</button>
+    </div>
+    <input class="jalur-search-input" id="inst-m-search" type="text"
+      placeholder="🔍 Cari nama store / customer / no DO..." oninput="renderInstalasiMobile()">
+    <div id="inst-m-summary" class="jalur-summary-bar"></div>
+    <div id="inst-m-list">
+      <div class="jalur-loading">
+        <div class="fp-spinner"></div>
+        <div>Memuat instalasi besok...</div>
+      </div>
     </div>
   </div>
 
@@ -2029,6 +2050,90 @@ function resetRDO() {
   document.getElementById('rdo-success').style.display = 'none';
   tambahBaris();
 }
+
+// ─── INSTALASI MOBILE ────────────────────────────────────────────────────────
+let INST_DATA    = [];
+let INST_HEADERS = [];
+
+async function loadInstalasiMobile() {
+  const listEl = document.getElementById('inst-m-list');
+  document.getElementById('inst-m-summary').innerHTML = '';
+  listEl.innerHTML = '<div class="jalur-loading"><div class="fp-spinner"></div><div>Memuat data instalasi...</div></div>';
+
+  try {
+    const data = await apiFetch('instalasi', {});
+    if (!data.rows || data.rows.length <= 1) {
+      listEl.innerHTML = '<div class="jalur-empty">🔧 Tidak ada data instalasi besok untuk HCIR Magelang Tidar</div>';
+      document.getElementById('inst-m-sub').textContent = 'Tidak ada data';
+      return;
+    }
+
+    INST_HEADERS = data.rows[0].map(h => String(h));
+    INST_DATA    = data.rows.slice(1).map(r => {
+      const obj = {};
+      INST_HEADERS.forEach((h, i) => { obj[h] = String(r[i] || '').trim(); });
+      return obj;
+    });
+
+    const wib   = new Date(new Date().getTime() + 7*60*60*1000);
+    const besok = new Date(wib.getTime() + 24*60*60*1000);
+    const tglBesok = besok.getUTCDate() + '/' + (besok.getUTCMonth()+1) + '/' + besok.getUTCFullYear();
+    document.getElementById('inst-m-sub').textContent =
+      `Instalasi Besok (${tglBesok}) — ${INST_DATA.length} item`;
+
+    renderInstalasiMobile();
+  } catch(e) {
+    listEl.innerHTML = `<div class="jalur-empty">⚠️ ${esc(e.message)}</div>`;
+    document.getElementById('inst-m-sub').textContent = 'Gagal memuat data';
+  }
+}
+
+function renderInstalasiMobile() {
+  const search  = document.getElementById('inst-m-search').value.toLowerCase();
+  const listEl  = document.getElementById('inst-m-list');
+  const sumEl   = document.getElementById('inst-m-summary');
+
+  const keyNo       = INST_HEADERS.find(h => h.toUpperCase() === 'NO') || '';
+  const keyStore    = INST_HEADERS.find(h => h.toUpperCase().includes('NAMA STORE')) || '';
+  const keyDO       = INST_HEADERS.find(h => h.toUpperCase().includes('NO DO')) || '';
+  const keyReceipt  = INST_HEADERS.find(h => h.toUpperCase().includes('NO RECIPT') || h.toUpperCase().includes('NO RECEIPT')) || '';
+  const keyCustomer = INST_HEADERS.find(h => h.toUpperCase().includes('NAMA CUSTOMER')) || '';
+
+  let filtered = INST_DATA;
+  if (search) {
+    filtered = filtered.filter(r =>
+      Object.values(r).join(' ').toLowerCase().includes(search)
+    );
+  }
+
+  sumEl.innerHTML = `
+    <div class="jalur-stat"><div class="jalur-stat-val">${filtered.length}</div><div class="jalur-stat-lbl">Instalasi</div></div>
+  `;
+
+  if (!filtered.length) {
+    listEl.innerHTML = '<div class="jalur-empty">Tidak ada data sesuai pencarian</div>';
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(r => `
+    <div class="jalur-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
+        <span style="font-size:10px;background:rgba(79,142,247,0.1);color:var(--accent);padding:2px 8px;border-radius:4px;font-weight:700">No. ${esc(r[keyNo] || '—')}</span>
+        <span style="font-size:10px;color:var(--text3)">${esc(r[keyDO] || '')}</span>
+      </div>
+      <div class="jalur-value">${esc(r[keyCustomer] || '—')}</div>
+      <div class="jalur-address" style="margin-top:4px">🏪 ${esc(r[keyStore] || '—')}</div>
+      ${r[keyReceipt] ? `<div style="margin-top:4px"><span class="jalur-noreceive">${esc(r[keyReceipt])}</span></div>` : ''}
+    </div>
+  `).join('');
+}
+
+// Update switchTab untuk load instalasi
+const _origSwitchTab2 = switchTab;
+switchTab = function(name) {
+  _origSwitchTab2(name);
+  if (name === 'instalasi' && INST_DATA.length === 0) loadInstalasiMobile();
+};
 </script>
 </body>
 </html>
