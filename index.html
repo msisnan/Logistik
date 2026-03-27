@@ -2201,8 +2201,10 @@ async function loadInstalasiMobile() {
       return;
     }
 
-    INST_HEADERS = data.rows[0].map(h => String(h));
-    INST_DATA    = data.rows.slice(1).map(r => {
+    // Cari baris header: baris pertama yang kolom pertamanya tidak kosong
+    const headerRowIdx = data.rows.findIndex(r => String(r[0] || '').trim() !== '');
+    INST_HEADERS = data.rows[headerRowIdx].map(h => String(h).trim());
+    INST_DATA    = data.rows.slice(headerRowIdx + 1).filter(r => r.some(c => String(c || '').trim() !== '')).map(r => {
       const obj = {};
       INST_HEADERS.forEach((h, i) => { obj[h] = String(r[i] || '').trim(); });
       return obj;
