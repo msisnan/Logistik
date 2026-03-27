@@ -2370,18 +2370,9 @@ function getInstKeys() {
 }
 
 function parseCustomerName(raw) {
-  // Ambil teks di kolom E: setelah koma ke-3 dan sebelum tanda titik (.)
-  // Contoh: "A,B,C,NAMA CUSTOMER.suffix" → "NAMA CUSTOMER"
+  // Ambil nama sebelum tanda koma pertama
   if (!raw) return '—';
   const parts = raw.split(',');
-  if (parts.length >= 4) {
-    // Gabungkan segmen ke-4 dst (index 3+), lalu ambil sebelum titik pertama
-    const after3 = parts.slice(3).join(',');
-    const dotIdx = after3.indexOf('.');
-    const name   = dotIdx >= 0 ? after3.substring(0, dotIdx) : after3;
-    return name.trim() || raw.trim();
-  }
-  // Fallback: ambil sebelum koma pertama
   return parts[0].trim() || raw.trim();
 }
 
@@ -2460,8 +2451,8 @@ function openInstModal(origIdx) {
   const customerName = parseCustomerName(customerRaw);
   const addressPart  = customerRaw.includes(',') ? customerRaw.substring(customerRaw.indexOf(',') + 1).trim() : '';
 
-  // Semua header ditampilkan sebagai detail
-  const skipKeys = new Set([keyNo, keyStore, keyDO, keyReceipt, keyCustomer]);
+  // Semua header ditampilkan sebagai detail (_rowIndex disembunyikan)
+  const skipKeys = new Set([keyNo, keyStore, keyDO, keyReceipt, keyCustomer, '_rowIndex']);
   const extraRows = INST_HEADERS
     .filter(h => h && !skipKeys.has(h))
     .map(h => {
@@ -2590,8 +2581,8 @@ function submitInstFeedback() {
     return;
   }
 
-  // Nilai untuk kolom F: "Bisa Dijalurkan" atau "Pending"
-  const feedbackStore = isOk ? 'Bisa Dijalurkan' : 'Pending';
+  // Nilai untuk kolom F: "BISA DIJALURKAN" atau "PENDING" (kapital)
+  const feedbackStore = isOk ? 'BISA DIJALURKAN' : 'PENDING';
 
   // Format tanggal reschedule: yyyy-mm-dd → dd/mm/yyyy untuk spreadsheet
   let tglReschedule = '';
@@ -2611,7 +2602,7 @@ function submitInstFeedback() {
     rowIndex:          rowIndex,
     feedbackStore:     feedbackStore,
     tanggalReschedule: tglReschedule,
-    namaSmt:           smt,
+    namaSmt:           smt.toUpperCase(),
   }).catch(err => console.warn('Sinkronisasi instalasi gagal:', err));
 }
 
