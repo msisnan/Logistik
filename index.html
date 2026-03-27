@@ -2370,9 +2370,18 @@ function getInstKeys() {
 }
 
 function parseCustomerName(raw) {
-  // Ambil nama sebelum tanda koma pertama
+  // Ambil teks di kolom E: setelah koma ke-3 dan sebelum tanda titik (.)
+  // Contoh: "A,B,C,NAMA CUSTOMER.suffix" → "NAMA CUSTOMER"
   if (!raw) return '—';
   const parts = raw.split(',');
+  if (parts.length >= 4) {
+    // Gabungkan segmen ke-4 dst (index 3+), lalu ambil sebelum titik pertama
+    const after3 = parts.slice(3).join(',');
+    const dotIdx = after3.indexOf('.');
+    const name   = dotIdx >= 0 ? after3.substring(0, dotIdx) : after3;
+    return name.trim() || raw.trim();
+  }
+  // Fallback: ambil sebelum koma pertama
   return parts[0].trim() || raw.trim();
 }
 
@@ -2571,6 +2580,39 @@ function submitInstFeedback() {
   document.body.style.overflow = '';
   INST_MODAL_IDX = -1;
   renderInstalasiMobile();
+
+  // ── Sinkron ke Spreadsheet ─────────────────────────────────────────────
+  const rowData = INST_DATA[idx];
+  const rowIndex = rowData['_rowIndex'] ? parseInt(rowData['_rowIndex']) : null;
+
+  if (!rowIndex) {
+    console.warn('_rowIndex tidak tersedia, sinkronisasi dilewati');
+    return;
+  }
+
+  // Nilai untuk kolom F: "Bisa Dijalurkan" atau "Pending"
+  const feedbackStore = isOk ? 'Bisa Dijalurkan' : 'Pending';
+
+  // Format tanggal reschedule: yyyy-mm-dd → dd/mm/yyyy untuk spreadsheet
+  let tglReschedule = '';
+  if (isPending && reschedule) {
+    const [y, m, d] = reschedule.split('-');
+    tglReschedule = `${d}/${m}/${y}`;
+  }
+
+  const GAS_URL = CFG.url || '';
+  if (!GAS_URL) {
+    console.warn('URL Apps Script belum dikonfigurasi, sinkronisasi dilewati');
+    return;
+  }
+
+  apiPost({
+    action:            'updateInstFeedback',
+    rowIndex:          rowIndex,
+    feedbackStore:     feedbackStore,
+    tanggalReschedule: tglReschedule,
+    namaSmt:           smt,
+  }).catch(err => console.warn('Sinkronisasi instalasi gagal:', err));
 }
 
 // Update switchTab untuk load instalasi
