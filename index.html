@@ -557,6 +557,127 @@
   .jalur-stat-val { font-size: 22px; font-weight: 700; color: var(--accent); }
   .jalur-stat-lbl { font-size: 10px; color: var(--text3); margin-top: 2px; }
 
+  /* ── INSTALASI CARD ──────────────────────────────────────────── */
+  .inst-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .inst-card:active { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,142,247,0.1); }
+  .inst-card-top {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px;
+  }
+  .inst-badge-no {
+    font-size: 10px; font-weight: 700; color: var(--accent);
+    background: rgba(79,142,247,0.1); padding: 2px 8px; border-radius: 4px;
+  }
+  .inst-badge-status {
+    font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px;
+  }
+  .inst-badge-status.s-ok { color: var(--green); background: rgba(16,185,129,0.1); }
+  .inst-badge-status.s-pending { color: var(--yellow); background: rgba(245,158,11,0.1); }
+  .inst-badge-status.s-new { color: var(--text3); background: var(--bg); }
+  .inst-nodo {
+    font-family: monospace; font-size: 11px; font-weight: 700; color: var(--accent2);
+    background: rgba(124,92,252,0.08); padding: 2px 8px; border-radius: 4px; display: inline-block;
+  }
+  .inst-receipt {
+    font-family: monospace; font-size: 11px; color: var(--text2);
+    background: var(--bg); padding: 2px 8px; border-radius: 4px; display: inline-block;
+  }
+  .inst-customer {
+    font-size: 14px; font-weight: 700; color: var(--text); margin: 6px 0 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .inst-store {
+    font-size: 11px; color: var(--text2); display: flex; align-items: center; gap: 4px;
+  }
+  .inst-arrow {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    font-size: 16px; color: var(--text3);
+  }
+
+  /* ── INSTALASI MODAL ─────────────────────────────────────────── */
+  .inst-modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    z-index: 100; display: none; align-items: flex-end;
+  }
+  .inst-modal-overlay.open { display: flex; }
+  .inst-modal {
+    background: var(--surface); border-radius: 20px 20px 0 0;
+    width: 100%; max-height: 90vh; overflow-y: auto;
+    padding: 0 0 32px; animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from{transform:translateY(60px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .inst-modal-handle {
+    width: 40px; height: 4px; background: var(--border);
+    border-radius: 2px; margin: 12px auto 0;
+  }
+  .inst-modal-header {
+    padding: 16px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .inst-modal-title { font-size: 15px; font-weight: 700; color: var(--text); }
+  .inst-modal-close {
+    width: 30px; height: 30px; border-radius: 50%; background: var(--bg);
+    border: none; font-size: 16px; color: var(--text2); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .inst-modal-body { padding: 16px 20px; }
+  .inst-detail-row {
+    display: flex; flex-direction: column; gap: 2px; margin-bottom: 14px;
+  }
+  .inst-detail-label {
+    font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .inst-detail-val {
+    font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.5;
+  }
+  .inst-detail-val.mono { font-family: monospace; color: var(--accent2); }
+  .inst-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+  .inst-feedback-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
+  .inst-feedback-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .inst-fb-btn {
+    padding: 13px 10px; border-radius: 12px; border: 2px solid var(--border);
+    font-size: 13px; font-weight: 700; cursor: pointer; text-align: center;
+    background: var(--bg); color: var(--text2); transition: all 0.2s; font-family: var(--sans);
+  }
+  .inst-fb-btn.fb-ok.selected { border-color: var(--green); background: rgba(16,185,129,0.08); color: var(--green); }
+  .inst-fb-btn.fb-pending.selected { border-color: var(--yellow); background: rgba(245,158,11,0.08); color: var(--yellow); }
+  .inst-pending-box {
+    background: rgba(245,158,11,0.06); border: 1.5px solid rgba(245,158,11,0.3);
+    border-radius: 12px; padding: 14px; display: none; margin-bottom: 14px;
+  }
+  .inst-pending-box.open { display: block; }
+  .inst-pending-label { font-size: 11px; font-weight: 600; color: var(--yellow); margin-bottom: 8px; }
+  .inst-pending-input {
+    width: 100%; padding: 11px 13px; background: var(--surface);
+    border: 1.5px solid rgba(245,158,11,0.4); border-radius: 9px;
+    font-size: 14px; font-family: var(--sans); color: var(--text); outline: none;
+  }
+  .inst-pending-input:focus { border-color: var(--yellow); }
+  .inst-smt-input {
+    width: 100%; padding: 11px 13px; background: var(--bg);
+    border: 1.5px solid var(--border); border-radius: 9px; margin-top: 8px;
+    font-size: 14px; font-family: var(--sans); color: var(--text); outline: none;
+  }
+  .inst-smt-input:focus { border-color: var(--accent); background: white; }
+  .inst-submit-btn {
+    width: 100%; padding: 15px; border-radius: 12px; border: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white; font-size: 15px; font-weight: 700; cursor: pointer;
+    font-family: var(--sans); margin-top: 4px;
+  }
+  .inst-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
   /* ── FOTO UPLOAD ──────────────────────────────────────────────── */
   .foto-area {
     border: 2px dashed var(--border);
@@ -1104,12 +1225,26 @@
       <button class="fp-refresh-btn" onclick="loadInstalasiMobile()" id="inst-m-refresh">↻</button>
     </div>
     <input class="jalur-search-input" id="inst-m-search" type="text"
-      placeholder="🔍 Cari nama store / customer / no DO..." oninput="renderInstalasiMobile()">
+      placeholder="🔍 Cari nama customer / no DO / receipt..." oninput="renderInstalasiMobile()">
     <div id="inst-m-summary" class="jalur-summary-bar"></div>
     <div id="inst-m-list">
       <div class="jalur-loading">
         <div class="fp-spinner"></div>
         <div>Memuat instalasi besok...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INSTALASI DETAIL MODAL -->
+  <div class="inst-modal-overlay" id="inst-modal-overlay" onclick="closeInstModal(event)">
+    <div class="inst-modal" id="inst-modal">
+      <div class="inst-modal-handle"></div>
+      <div class="inst-modal-header">
+        <div class="inst-modal-title">📋 Detail Instalasi</div>
+        <button class="inst-modal-close" onclick="closeInstModal()">✕</button>
+      </div>
+      <div class="inst-modal-body" id="inst-modal-body">
+        <!-- diisi JS -->
       </div>
     </div>
   </div>
@@ -2223,26 +2358,49 @@ async function loadInstalasiMobile() {
   }
 }
 
+// ─── KEY MAPPING INSTALASI ───────────────────────────────────────────────────
+function getInstKeys() {
+  return {
+    keyNo:       INST_HEADERS.find(h => h.toUpperCase() === 'NO') || '',
+    keyStore:    INST_HEADERS.find(h => h.toUpperCase().includes('NAMA STORE')) || '',
+    keyDO:       INST_HEADERS.find(h => h.toUpperCase().includes('NO DO')) || '',
+    keyReceipt:  INST_HEADERS.find(h => h.toUpperCase().includes('NO RECIPT') || h.toUpperCase().includes('NO RECEIPT')) || '',
+    keyCustomer: INST_HEADERS.find(h => h.toUpperCase().includes('NAMA CUSTOMER')) || '',
+  };
+}
+
+function parseCustomerName(raw) {
+  // Ambil nama sebelum tanda koma pertama
+  if (!raw) return '—';
+  const parts = raw.split(',');
+  return parts[0].trim() || raw.trim();
+}
+
+function getInstFeedback(rowIdx) {
+  return INST_FEEDBACK[rowIdx] || null;
+}
+
 function renderInstalasiMobile() {
   const search  = document.getElementById('inst-m-search').value.toLowerCase();
   const listEl  = document.getElementById('inst-m-list');
   const sumEl   = document.getElementById('inst-m-summary');
+  const { keyNo, keyStore, keyDO, keyReceipt, keyCustomer } = getInstKeys();
 
-  const keyNo       = INST_HEADERS.find(h => h.toUpperCase() === 'NO') || '';
-  const keyStore    = INST_HEADERS.find(h => h.toUpperCase().includes('NAMA STORE')) || '';
-  const keyDO       = INST_HEADERS.find(h => h.toUpperCase().includes('NO DO')) || '';
-  const keyReceipt  = INST_HEADERS.find(h => h.toUpperCase().includes('NO RECIPT') || h.toUpperCase().includes('NO RECEIPT')) || '';
-  const keyCustomer = INST_HEADERS.find(h => h.toUpperCase().includes('NAMA CUSTOMER')) || '';
-
-  let filtered = INST_DATA;
+  let filtered = INST_DATA.map((r, i) => ({ r, origIdx: i }));
   if (search) {
-    filtered = filtered.filter(r =>
+    filtered = filtered.filter(({ r }) =>
       Object.values(r).join(' ').toLowerCase().includes(search)
     );
   }
 
+  const total   = filtered.length;
+  const okCount = filtered.filter(({ origIdx }) => INST_FEEDBACK[origIdx]?.status === 'ok').length;
+  const pdCount = filtered.filter(({ origIdx }) => INST_FEEDBACK[origIdx]?.status === 'pending').length;
+
   sumEl.innerHTML = `
-    <div class="jalur-stat"><div class="jalur-stat-val">${filtered.length}</div><div class="jalur-stat-lbl">Instalasi</div></div>
+    <div class="jalur-stat"><div class="jalur-stat-val">${total}</div><div class="jalur-stat-lbl">Total</div></div>
+    <div class="jalur-stat"><div class="jalur-stat-val" style="color:var(--green)">${okCount}</div><div class="jalur-stat-lbl">Dijalurkan</div></div>
+    <div class="jalur-stat"><div class="jalur-stat-val" style="color:var(--yellow)">${pdCount}</div><div class="jalur-stat-lbl">Pending</div></div>
   `;
 
   if (!filtered.length) {
@@ -2250,17 +2408,169 @@ function renderInstalasiMobile() {
     return;
   }
 
-  listEl.innerHTML = filtered.map(r => `
-    <div class="jalur-card">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
-        <span style="font-size:10px;background:rgba(79,142,247,0.1);color:var(--accent);padding:2px 8px;border-radius:4px;font-weight:700">No. ${esc(r[keyNo] || '—')}</span>
-        <span style="font-size:10px;color:var(--text3)">${esc(r[keyDO] || '')}</span>
-      </div>
-      <div class="jalur-value">${esc(r[keyCustomer] || '—')}</div>
-      <div class="jalur-address" style="margin-top:4px">🏪 ${esc(r[keyStore] || '—')}</div>
-      ${r[keyReceipt] ? `<div style="margin-top:4px"><span class="jalur-noreceive">${esc(r[keyReceipt])}</span></div>` : ''}
+  listEl.innerHTML = filtered.map(({ r, origIdx }) => {
+    const fb        = INST_FEEDBACK[origIdx];
+    const customer  = parseCustomerName(r[keyCustomer]);
+    const noDO      = r[keyDO] || '—';
+    const receipt   = r[keyReceipt] || '';
+    const store     = r[keyStore] || '—';
+    const no        = r[keyNo] || '—';
+
+    let statusBadge = '<span class="inst-badge-status s-new">Belum</span>';
+    if (fb?.status === 'ok')      statusBadge = '<span class="inst-badge-status s-ok">✓ Dijalurkan</span>';
+    if (fb?.status === 'pending') statusBadge = '<span class="inst-badge-status s-pending">⏳ Pending</span>';
+
+    return `
+      <div class="inst-card" onclick="openInstModal(${origIdx})">
+        <div class="inst-card-top">
+          <span class="inst-badge-no">No. ${esc(no)}</span>
+          ${statusBadge}
+        </div>
+        <div class="inst-customer">${esc(customer)}</div>
+        <div class="inst-store">🏪 ${esc(store)}</div>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+          <span class="inst-nodo">${esc(noDO)}</span>
+          ${receipt ? `<span class="inst-receipt">${esc(receipt)}</span>` : ''}
+        </div>
+        <span class="inst-arrow">›</span>
+      </div>`;
+  }).join('');
+}
+
+// ─── INSTALASI MODAL ─────────────────────────────────────────────────────────
+let INST_FEEDBACK   = {};   // { origIdx: { status, reschedule, smt } }
+let INST_MODAL_IDX  = -1;
+
+function openInstModal(origIdx) {
+  INST_MODAL_IDX = origIdx;
+  const r = INST_DATA[origIdx];
+  const { keyNo, keyStore, keyDO, keyReceipt, keyCustomer } = getInstKeys();
+  const fb = INST_FEEDBACK[origIdx] || {};
+
+  const customerRaw = r[keyCustomer] || '';
+  const customerName = parseCustomerName(customerRaw);
+  const addressPart  = customerRaw.includes(',') ? customerRaw.substring(customerRaw.indexOf(',') + 1).trim() : '';
+
+  // Semua header ditampilkan sebagai detail
+  const skipKeys = new Set([keyNo, keyStore, keyDO, keyReceipt, keyCustomer]);
+  const extraRows = INST_HEADERS
+    .filter(h => h && !skipKeys.has(h))
+    .map(h => {
+      const val = r[h];
+      if (!val) return '';
+      return `<div class="inst-detail-row">
+        <div class="inst-detail-label">${esc(h)}</div>
+        <div class="inst-detail-val">${esc(val)}</div>
+      </div>`;
+    }).join('');
+
+  document.getElementById('inst-modal-body').innerHTML = `
+    <!-- INFO UTAMA -->
+    <div class="inst-detail-row">
+      <div class="inst-detail-label">No. Urut</div>
+      <div class="inst-detail-val">${esc(r[keyNo] || '—')}</div>
     </div>
-  `).join('');
+    <div class="inst-detail-row">
+      <div class="inst-detail-label">Nama Customer</div>
+      <div class="inst-detail-val" style="font-size:15px">${esc(customerName)}</div>
+    </div>
+    ${addressPart ? `<div class="inst-detail-row">
+      <div class="inst-detail-label">Alamat</div>
+      <div class="inst-detail-val" style="font-weight:400;color:var(--text2)">${esc(addressPart)}</div>
+    </div>` : ''}
+    <div class="inst-detail-row">
+      <div class="inst-detail-label">Nama Store</div>
+      <div class="inst-detail-val">🏪 ${esc(r[keyStore] || '—')}</div>
+    </div>
+    <div class="inst-detail-row">
+      <div class="inst-detail-label">No DO</div>
+      <div class="inst-detail-val mono">${esc(r[keyDO] || '—')}</div>
+    </div>
+    <div class="inst-detail-row">
+      <div class="inst-detail-label">No Receipt</div>
+      <div class="inst-detail-val mono" style="color:var(--accent)">${esc(r[keyReceipt] || '—')}</div>
+    </div>
+    ${extraRows}
+
+    <hr class="inst-divider">
+
+    <!-- FEEDBACK -->
+    <div class="inst-feedback-title">📝 Feedback</div>
+    <div class="inst-feedback-btns">
+      <button class="inst-fb-btn fb-ok ${fb.status === 'ok' ? 'selected' : ''}"
+        onclick="selectInstFeedback('ok')">✅ Bisa Dijalurkan</button>
+      <button class="inst-fb-btn fb-pending ${fb.status === 'pending' ? 'selected' : ''}"
+        onclick="selectInstFeedback('pending')">⏳ Pending</button>
+    </div>
+
+    <div class="inst-pending-box ${fb.status === 'pending' ? 'open' : ''}" id="inst-pending-box">
+      <div class="inst-pending-label">📅 Reschedule (Tanggal)</div>
+      <input class="inst-pending-input" id="inst-reschedule-input" type="date"
+        value="${fb.reschedule || ''}">
+    </div>
+
+    <div class="inst-detail-row" style="margin-top:4px">
+      <div class="inst-detail-label">Nama SMT</div>
+      <input class="inst-smt-input" id="inst-smt-input" type="text"
+        placeholder="Nama SMT..." value="${esc(fb.smt || '')}">
+    </div>
+
+    <button class="inst-submit-btn" onclick="submitInstFeedback()">Simpan Feedback</button>
+  `;
+
+  document.getElementById('inst-modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeInstModal(e) {
+  if (e && e.target !== document.getElementById('inst-modal-overlay')) return;
+  document.getElementById('inst-modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  INST_MODAL_IDX = -1;
+}
+
+function selectInstFeedback(status) {
+  const btns = document.querySelectorAll('.inst-fb-btn');
+  btns.forEach(b => b.classList.remove('selected'));
+  const box = document.getElementById('inst-pending-box');
+
+  if (status === 'ok') {
+    document.querySelector('.inst-fb-btn.fb-ok').classList.add('selected');
+    box.classList.remove('open');
+  } else {
+    document.querySelector('.inst-fb-btn.fb-pending').classList.add('selected');
+    box.classList.add('open');
+  }
+}
+
+function submitInstFeedback() {
+  const idx = INST_MODAL_IDX;
+  if (idx < 0) return;
+
+  const isOk      = document.querySelector('.inst-fb-btn.fb-ok')?.classList.contains('selected');
+  const isPending = document.querySelector('.inst-fb-btn.fb-pending')?.classList.contains('selected');
+
+  if (!isOk && !isPending) {
+    alert('⚠ Pilih status feedback terlebih dahulu');
+    return;
+  }
+
+  const status     = isOk ? 'ok' : 'pending';
+  const reschedule = isPending ? (document.getElementById('inst-reschedule-input')?.value || '') : '';
+  const smt        = document.getElementById('inst-smt-input')?.value.trim() || '';
+
+  if (isPending && !reschedule) {
+    alert('⚠ Isi tanggal reschedule terlebih dahulu');
+    return;
+  }
+
+  INST_FEEDBACK[idx] = { status, reschedule, smt };
+
+  // Tutup modal & refresh list
+  document.getElementById('inst-modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  INST_MODAL_IDX = -1;
+  renderInstalasiMobile();
 }
 
 // Update switchTab untuk load instalasi
