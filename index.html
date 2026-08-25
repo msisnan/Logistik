@@ -1515,9 +1515,9 @@ async function loadFPData() {
     const data = await apiFetch('read', { sheet: CFG.fp, startRow: 3 });
     // data.rows sudah difilter server-side (hanya baris dengan receipt)
 
-    // Map rows → objects, filter hanya yang bukan "Sudah Diterima Cust"
-    // Server menyisipkan actual sheet row number sebagai elemen terakhir array
-    // Ini dipakai untuk update cell yang tepat saat submit feedback
+    // Map rows → objects, filter:
+    // 1. Hanya yang punya receipt
+    // 2. Hapus yang sudah feedback "Sudah Diterima Cust"
     FP_DATA = data.rows
       .map(r => ({
         rowIndex:    r[r.length - 1],
@@ -1531,7 +1531,7 @@ async function loadFPData() {
         feedback:    String(r[7] || '').trim(),
         remark:      String(r[9] || '').trim()
       }))
-      .filter(r => r.receipt);
+      .filter(r => r.receipt && r.feedback !== 'Sudah Diterima Cust');
 
     renderPICList();
   } catch(e) {
