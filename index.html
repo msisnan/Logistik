@@ -1274,6 +1274,10 @@
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
 // ── KONFIGURASI — isi URL Apps Script kamu di sini ──────────────────────────
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzrUZBejNUGKsRtpmg6GBt8haVE8hWmLC7B-vqWXEUV2vIZZCb9UrNo9vZ2AJub3Cd3Rw/exec';
+
+// URL Apps Script BARU untuk sync ke spreadsheet target (153_c...)
+// GANTI URL INI setelah deploy apps-script-ff-to-sheet-advanced.gs
+const APPS_SCRIPT_URL_NEW = 'GANTI_DENGAN_URL_DEPLOYMENT_BARU';
 // ─────────────────────────────────────────────────────────────────────────────
 
 let CFG = {
@@ -1710,20 +1714,34 @@ async function submitFeedback() {
     document.getElementById('fb-remark').focus();
     return;
   }
-  if (!CFG.url) { alert('⚠ URL Apps Script belum diisi di Setting'); return; }
+
+  // Cek URL spreadsheet BARU sudah diisi
+  if (!APPS_SCRIPT_URL_NEW || APPS_SCRIPT_URL_NEW === 'GANTI_DENGAN_URL_DEPLOYMENT_BARU') {
+    alert('⚠ URL Apps Script baru belum diisi. Deploy script terlebih dahulu.');
+    return;
+  }
 
   showLoading(true);
   try {
     const remark = document.getElementById('fb-remark').value.trim();
+    const receipt = CURRENT_ROW.receipt;
 
-    // Update kolom H (index 8 = kolom ke-8) dengan feedback
-    const d1 = await apiPost({ action:'update', sheet:CFG.fp, rowIndex:CURRENT_ROW.rowIndex, col:8, value:CURRENT_FEEDBACK });
-    if (!d1.ok) throw new Error(d1.message);
+    // Kirim langsung ke spreadsheet BARU (153_c...)
+    const response = await fetch(APPS_SCRIPT_URL_NEW, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        action: 'updateFeedback',
+        receipt: receipt,
+        feedback: CURRENT_FEEDBACK,
+        remark: remark
+      })
+    });
 
-    // Jika Other, update juga kolom J (index 10 = kolom ke-10)
-    if (CURRENT_FEEDBACK === 'Other' && remark) {
-      const d2 = await apiPost({ action:'update', sheet:CFG.fp, rowIndex:CURRENT_ROW.rowIndex, col:10, value:remark });
-      if (!d2.ok) throw new Error(d2.message);
+    const result = await response.json();
+    
+    if (!result.ok) {
+      throw new Error(result.message || 'Gagal menyimpan feedback');
     }
 
     // Update local data
@@ -1735,13 +1753,47 @@ async function submitFeedback() {
     const successEl = document.getElementById('fb-success');
     successEl.style.display = 'block';
     document.getElementById('fb-success-msg').innerHTML =
-      `Feedback <b>${esc(CURRENT_FEEDBACK)}</b> untuk <b>${esc(CURRENT_ROW.receipt)}</b> berhasil disimpan.` +
+      `Feedback <b>${esc(CURRENT_FEEDBACK)}</b> untuk <b>${esc(CURRENT_ROW.receipt)}</b> berhasil disimpan ke spreadsheet baru.` +
       (CURRENT_FEEDBACK === 'Other' ? `<br>Remark: ${esc(remark)}` : '');
 
   } catch(e) {
     alert('❌ Gagal menyimpan: ' + e.message);
   } finally {
     showLoading(false);
+  }
+}
+
+/**
+ * AUTO-SYNC ke spreadsheet BARU setelah feedback disimpan
+ * Akan sync hanya kolom G & H (Feedback SMT & Remark)
+ */
+async function autoSyncToNewSpreadsheet() {
+  // Cek apakah URL baru sudah diisi
+  if (!APPS_SCRIPT_URL_NEW || APPS_SCRIPT_URL_NEW === 'GANTI_DENGAN_URL_DEPLOYMENT_BARU') {
+    console.log('⚠️ URL Apps Script baru belum diisi. Skip auto-sync.');
+    return;
+  }
+
+  try {
+    console.log('🔄 Auto-sync ke spreadsheet baru...');
+    
+    const response = await fetch(APPS_SCRIPT_URL_NEW + '?action=syncFFToSheet', {
+      method: 'GET',
+      redirect: 'follow'
+    });
+    
+    const result = await response.json();
+    
+    if (result.ok) {
+      console.log('✅ Auto-sync berhasil:', result.message);
+      // Opsional: tampilkan notifikasi subtle ke user
+      // showNotification('✅ Data tersinkronisasi ke spreadsheet target');
+    } else {
+      console.warn('⚠️ Auto-sync gagal:', result.message);
+    }
+  } catch (e) {
+    console.error('❌ Error auto-sync:', e);
+    // Tidak throw error, biarkan proses normal tetap jalan
   }
 }
 
