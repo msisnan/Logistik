@@ -1636,7 +1636,7 @@ function showReceiptList(picName) {
 
   listEl.innerHTML = items.map(r => {
     const hasFb = r.feedback;
-    return `<div class="receipt-card" onclick="showFeedbackForm(${r.rowIndex})">
+    return `<div class="receipt-card" onclick="showFeedbackForm(${r.rowIndex}); event.stopPropagation();">
       <div class="receipt-card-top">
         <div style="flex:1;min-width:0">
           <div class="receipt-code">${esc(r.receipt)}</div>
