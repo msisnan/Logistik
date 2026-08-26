@@ -1538,7 +1538,18 @@ async function loadFPData() {
     
     console.log('[FP] Total data dengan receipt:', allData.length);
     console.log('[FP] Sample rowIndex:', allData.slice(0, 3).map(r => `${r.receipt}: ${r.rowIndex}`));
-    const filtered = allData.filter(r => r.feedback !== 'Sudah Diterima Cust');
+    console.log('[FP] Sample feedback values:', allData.slice(0, 5).map(r => `"${r.feedback}"`));
+    
+    // Filter: hapus yang feedbacknya mengandung "diterima" dan "cust" (case insensitive)
+    const filtered = allData.filter(r => {
+      const fb = r.feedback.toLowerCase();
+      const shouldFilter = fb.includes('diterima') && fb.includes('cust');
+      if (shouldFilter) {
+        console.log('[FP] Filtering out:', r.receipt, '| feedback:', r.feedback);
+      }
+      return !shouldFilter;
+    });
+    
     console.log('[FP] Setelah filter "Sudah Diterima Cust":', filtered.length);
     console.log('[FP] Yang di-filter:', allData.length - filtered.length, 'item');
     
@@ -1605,8 +1616,11 @@ function renderPICList() {
 
   listEl.innerHTML = names.map(name => {
     const items     = groups[name];
-    // Hanya hitung yang statusnya bukan Sudah Diterima Cust
-    const aktif     = items.filter(r => (r.feedback || '').trim() !== 'Sudah Diterima Cust');
+    // Filter: hapus yang feedbacknya mengandung "diterima" dan "cust" (case insensitive)
+    const aktif     = items.filter(r => {
+      const fb = (r.feedback || '').toLowerCase();
+      return !(fb.includes('diterima') && fb.includes('cust'));
+    });
     const pending   = aktif.filter(r => !r.feedback).length;
     console.log('[renderPICList] PIC:', name, '| Total:', items.length, '| Aktif:', aktif.length, '| Pending:', pending);
     if (!aktif.length) return ''; // semua sudah diterima, skip PIC ini
@@ -1638,11 +1652,13 @@ function showReceiptList(picName) {
   document.getElementById('fp-screen-receipt').style.display  = 'block';
   document.getElementById('fp-screen-feedback').style.display = 'none';
 
-  // Tampilkan hanya yang feedback (kolom H) bukan "Sudah Diterima Cust"
-  const items = FP_DATA.filter(r =>
-    (r.picSE || '(Tanpa PIC)').trim() === picName.trim() &&
-    (r.feedback || '').trim() !== 'Sudah Diterima Cust'
-  );
+  // Filter: hapus yang feedbacknya mengandung "diterima" dan "cust" (case insensitive)
+  const items = FP_DATA.filter(r => {
+    const picMatch = (r.picSE || '(Tanpa PIC)').trim() === picName.trim();
+    const fb = (r.feedback || '').toLowerCase();
+    const notDone = !(fb.includes('diterima') && fb.includes('cust'));
+    return picMatch && notDone;
+  });
   console.log('[showReceiptList] Total items untuk PIC ini:', items.length);
   const listEl = document.getElementById('fp-receipt-list');
 
