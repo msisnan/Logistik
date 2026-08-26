@@ -1519,21 +1519,25 @@ async function loadFPData() {
     // 1. Hanya yang punya receipt
     // 2. Hapus yang sudah feedback "Sudah Diterima Cust"
     const allData = data.rows
-      .map(r => ({
-        rowIndex:    r[r.length - 1],
-        receipt:     String(r[0] || '').trim(),
-        customer:    String(r[1] || '').trim(),
-        requestDate: parseDate(r[2]),
-        sla:         (r[3] !== '' && r[3] != null) ? String(r[3]) : '',
-        picSE:       String(r[4] || '').trim(),
-        booking:     String(r[5] || '').trim(),
-        status:      String(r[6] || '').trim(),
-        feedback:    String(r[7] || '').trim(),
-        remark:      String(r[9] || '').trim()
-      }))
+      .map((r, idx) => {
+        const rowIndex = r[r.length - 1] || (idx + 3); // fallback ke index + 3 (karena mulai dari baris 3)
+        return {
+          rowIndex:    rowIndex,
+          receipt:     String(r[0] || '').trim(),
+          customer:    String(r[1] || '').trim(),
+          requestDate: parseDate(r[2]),
+          sla:         (r[3] !== '' && r[3] != null) ? String(r[3]) : '',
+          picSE:       String(r[4] || '').trim(),
+          booking:     String(r[5] || '').trim(),
+          status:      String(r[6] || '').trim(),
+          feedback:    String(r[7] || '').trim(),
+          remark:      String(r[9] || '').trim()
+        };
+      })
       .filter(r => r.receipt);
     
     console.log('[FP] Total data dengan receipt:', allData.length);
+    console.log('[FP] Sample rowIndex:', allData.slice(0, 3).map(r => `${r.receipt}: ${r.rowIndex}`));
     const filtered = allData.filter(r => r.feedback !== 'Sudah Diterima Cust');
     console.log('[FP] Setelah filter "Sudah Diterima Cust":', filtered.length);
     console.log('[FP] Yang di-filter:', allData.length - filtered.length, 'item');
@@ -1678,10 +1682,15 @@ function showReceiptScreen() {
 
 function showFeedbackForm(rowIndex) {
   console.log('[showFeedbackForm] Called with rowIndex:', rowIndex);
-  const row = FP_DATA.find(r => r.rowIndex === rowIndex);
+  console.log('[showFeedbackForm] Searching in FP_DATA, total items:', FP_DATA.length);
+  console.log('[showFeedbackForm] FP_DATA rowIndexes:', FP_DATA.map(r => r.rowIndex));
+  
+  let row = FP_DATA.find(r => r.rowIndex == rowIndex); // gunakan == bukan === untuk type coercion
   console.log('[showFeedbackForm] Found row:', row);
+  
   if (!row) {
     console.error('[showFeedbackForm] Row tidak ditemukan untuk rowIndex:', rowIndex);
+    alert('⚠ Data tidak ditemukan. Coba refresh halaman.');
     return;
   }
   CURRENT_ROW      = row;
