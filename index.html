@@ -1518,7 +1518,7 @@ async function loadFPData() {
     // Map rows → objects, filter:
     // 1. Hanya yang punya receipt
     // 2. Hapus yang sudah feedback "Sudah Diterima Cust"
-    FP_DATA = data.rows
+    const allData = data.rows
       .map(r => ({
         rowIndex:    r[r.length - 1],
         receipt:     String(r[0] || '').trim(),
@@ -1531,7 +1531,14 @@ async function loadFPData() {
         feedback:    String(r[7] || '').trim(),
         remark:      String(r[9] || '').trim()
       }))
-      .filter(r => r.receipt && r.feedback !== 'Sudah Diterima Cust');
+      .filter(r => r.receipt);
+    
+    console.log('[FP] Total data dengan receipt:', allData.length);
+    const filtered = allData.filter(r => r.feedback !== 'Sudah Diterima Cust');
+    console.log('[FP] Setelah filter "Sudah Diterima Cust":', filtered.length);
+    console.log('[FP] Yang di-filter:', allData.length - filtered.length, 'item');
+    
+    FP_DATA = filtered;
 
     renderPICList();
   } catch(e) {
@@ -1575,6 +1582,8 @@ function renderPICList() {
   const listEl = document.getElementById('fp-pic-list');
   listEl.style.display = 'block';
 
+  console.log('[renderPICList] Total FP_DATA:', FP_DATA.length);
+
   // Group by PIC SE — dari SEMUA data
   const groups = {};
   FP_DATA.forEach(r => {
@@ -1584,6 +1593,7 @@ function renderPICList() {
   });
 
   const names = Object.keys(groups).sort();
+  console.log('[renderPICList] Total PIC:', names.length);
   if (!names.length) {
     listEl.innerHTML = '<div class="fp-empty-state">🎉 Semua order sudah diterima!</div>';
     return;
@@ -1594,6 +1604,7 @@ function renderPICList() {
     // Hanya hitung yang statusnya bukan Sudah Diterima Cust
     const aktif     = items.filter(r => (r.feedback || '').trim() !== 'Sudah Diterima Cust');
     const pending   = aktif.filter(r => !r.feedback).length;
+    console.log('[renderPICList] PIC:', name, '| Total:', items.length, '| Aktif:', aktif.length, '| Pending:', pending);
     if (!aktif.length) return ''; // semua sudah diterima, skip PIC ini
     return `<div class="pic-card" onclick="showReceiptList('${escQ(name)}')">
       <div>
@@ -1617,6 +1628,7 @@ function showPICScreen() {
 
 function showReceiptList(picName) {
   CURRENT_PIC = picName;
+  console.log('[showReceiptList] PIC:', picName);
   document.getElementById('fp-pic-name-title').textContent = picName;
   document.getElementById('fp-screen-pic').style.display      = 'none';
   document.getElementById('fp-screen-receipt').style.display  = 'block';
@@ -1627,6 +1639,7 @@ function showReceiptList(picName) {
     (r.picSE || '(Tanpa PIC)').trim() === picName.trim() &&
     (r.feedback || '').trim() !== 'Sudah Diterima Cust'
   );
+  console.log('[showReceiptList] Total items untuk PIC ini:', items.length);
   const listEl = document.getElementById('fp-receipt-list');
 
   if (!items.length) {
@@ -1636,7 +1649,8 @@ function showReceiptList(picName) {
 
   listEl.innerHTML = items.map(r => {
     const hasFb = r.feedback;
-    return `<div class="receipt-card" onclick="showFeedbackForm(${r.rowIndex}); event.stopPropagation();">
+    console.log('[Receipt Card] Rendering:', r.receipt, 'rowIndex:', r.rowIndex, 'feedback:', r.feedback);
+    return `<div class="receipt-card" onclick="console.log('Card clicked:', ${r.rowIndex}); showFeedbackForm(${r.rowIndex}); event.stopPropagation();">
       <div class="receipt-card-top">
         <div style="flex:1;min-width:0">
           <div class="receipt-code">${esc(r.receipt)}</div>
@@ -1663,8 +1677,13 @@ function showReceiptScreen() {
 }
 
 function showFeedbackForm(rowIndex) {
+  console.log('[showFeedbackForm] Called with rowIndex:', rowIndex);
   const row = FP_DATA.find(r => r.rowIndex === rowIndex);
-  if (!row) return;
+  console.log('[showFeedbackForm] Found row:', row);
+  if (!row) {
+    console.error('[showFeedbackForm] Row tidak ditemukan untuk rowIndex:', rowIndex);
+    return;
+  }
   CURRENT_ROW      = row;
   CURRENT_FEEDBACK = '';
 
@@ -1695,6 +1714,7 @@ function showFeedbackForm(rowIndex) {
       }
     });
   }
+  console.log('[showFeedbackForm] Screen feedback ditampilkan');
 }
 
 function selectFeedback(val, el) {
