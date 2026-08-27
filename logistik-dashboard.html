@@ -621,14 +621,13 @@
         <div class="config-title">🔗 Google Apps Script Web App URL</div>
         <div class="config-grid">
           <div class="config-field" style="grid-column:1/-1">
-            <span class="config-label">URL Apps Script — Spreadsheet 1 (XPDC, RT HUB, Jalur, RDO, Instalasi)</span>
+            <span class="config-label">URL Apps Script (untuk semua sheet)</span>
             <input class="config-input" id="cfg-url" type="text" placeholder="https://script.google.com/macros/s/AKfycb.../exec">
             <div style="font-size:10px;color:var(--text3);margin-top:4px;">Spreadsheet ID: 1Or1lZ77abNvK9Ea6ZsBPdV8r8lOdYyQhuR1M0wNv6zE</div>
           </div>
-          <div class="config-field" style="grid-column:1/-1">
-            <span class="config-label">URL Apps Script — Spreadsheet 2 (FF Pending)</span>
-            <input class="config-input" id="cfg-url-ff" type="text" placeholder="https://script.google.com/macros/s/AKfycb.../exec">
-            <div style="font-size:10px;color:var(--text3);margin-top:4px;">Spreadsheet ID: 153_cTlPFgISUUZftuwnopAckoVUVnZLH8Fm-niA3S68</div>
+          <div class="config-field">
+            <span class="config-label">ID Spreadsheet</span>
+            <input class="config-input" id="cfg-sheet-id" type="text" placeholder="1Or1lZ77abNvK9Ea6ZsBPdV8r8lOdYyQhuR1M0wNv6zE">
           </div>
           <div class="config-field">
             <span class="config-label">Nama Sheet — FF Pending</span>
@@ -843,8 +842,7 @@
 <script>
 // ─── CONFIG ─────────────────────────────────────────────────────────────────
 let CONFIG = {
-  url: '',        // URL Apps Script untuk Spreadsheet 1 (XPDC, RT HUB, Jalur, RDO, Instalasi)
-  urlFF: '',      // URL Apps Script untuk Spreadsheet 2 (FF Pending)
+  url: '',        // URL Apps Script untuk semua sheet (1 spreadsheet)
   sheetId: '',
   sheetFP: 'FF Pending',
   sheetXPDC: 'Kirim XPDC',
@@ -882,7 +880,6 @@ function loadConfig() {
   const saved = localStorage.getItem('logistik_config');
   if (saved) CONFIG = { ...CONFIG, ...JSON.parse(saved) };
   document.getElementById('cfg-url').value = CONFIG.url || '';
-  document.getElementById('cfg-url-ff').value = CONFIG.urlFF || '';
   document.getElementById('cfg-sheet-fp').value = CONFIG.sheetFP || '';
   document.getElementById('cfg-sheet-xpdc').value = CONFIG.sheetXPDC || '';
   document.getElementById('cfg-sheet-rthub').value = CONFIG.sheetRTHUB || '';
@@ -891,7 +888,6 @@ function loadConfig() {
 
 function saveConfig() {
   CONFIG.url = document.getElementById('cfg-url').value.trim();
-  CONFIG.urlFF = document.getElementById('cfg-url-ff').value.trim();
   CONFIG.sheetFP = document.getElementById('cfg-sheet-fp').value.trim();
   CONFIG.sheetXPDC = document.getElementById('cfg-sheet-xpdc').value.trim();
   CONFIG.sheetRTHUB = document.getElementById('cfg-sheet-rthub').value.trim();
@@ -903,40 +899,24 @@ function saveConfig() {
 function showConfig() { showPage('config'); }
 
 async function testConnection() {
-  if (!CONFIG.url && !CONFIG.urlFF) { 
+  if (!CONFIG.url) { 
     notify('⚠ URL belum diisi', 'error'); 
     return; 
   }
   
-  let results = [];
-  
-  // Test Spreadsheet 1 (XPDC, RT HUB, Jalur, RDO, Instalasi)
-  if (CONFIG.url) {
-    try {
-      const d = await xhrGet(`${CONFIG.url}?action=read&sheet=Kirim%20XPDC&startRow=1`);
-      results.push('✅ Spreadsheet 1 (XPDC/RT HUB): OK');
-    } catch(e) {
-      results.push('❌ Spreadsheet 1: ' + e.message);
+  try {
+    // Test dengan action read pada sheet FF Pending (yang pasti ada di spreadsheet)
+    const url = `${CONFIG.url}?action=read&sheet=FF%20Pending&startRow=1`;
+    const d = await xhrGet(url);
+    
+    if (d.ok) {
+      notify('✅ Koneksi berhasil!', 'success');
+    } else {
+      notify('❌ ' + d.message, 'error');
     }
+  } catch(e) {
+    notify('❌ ' + e.message, 'error');
   }
-  
-  // Test Spreadsheet 2 (FF Pending)
-  if (CONFIG.urlFF) {
-    try {
-      const d = await xhrGet(`${CONFIG.urlFF}?action=testConnection`);
-      if (d.ok) {
-        results.push('✅ Spreadsheet 2 (FF Pending): OK');
-      } else {
-        results.push('❌ Spreadsheet 2: ' + d.message);
-      }
-    } catch(e) {
-      results.push('❌ Spreadsheet 2: ' + e.message);
-    }
-  }
-  
-  // Tampilkan hasil
-  const allOk = results.every(r => r.startsWith('✅'));
-  notify(results.join('\n'), allOk ? 'success' : 'error');
 }
 
 // ─── NAVIGATION ──────────────────────────────────────────────────────────────
@@ -989,11 +969,10 @@ function xhrGet(url) {
   });
 }
 
-async function fetchSheet(sheetName, startRow = 1, useFFUrl = false) {
-  const url = useFFUrl ? CONFIG.urlFF : CONFIG.url;
-  if (!url) throw new Error('URL belum dikonfigurasi. Klik ⚙ Konfigurasi dan isi URL Apps Script.');
-  const fullUrl = `${url}?action=read&sheet=${encodeURIComponent(sheetName)}&startRow=${startRow}`;
-  const data = await xhrGet(fullUrl);
+async function fetchSheet(sheetName, startRow = 1) {
+  if (!CONFIG.url) throw new Error('URL belum dikonfigurasi. Klik ⚙ Konfigurasi dan isi URL Apps Script.');
+  const url = `${CONFIG.url}?action=read&sheet=${encodeURIComponent(sheetName)}&startRow=${startRow}`;
+  const data = await xhrGet(url);
   if (!data.ok) throw new Error(data.message || 'Error dari server');
   return data.rows;
 }
@@ -1003,7 +982,7 @@ async function fetchSheet(sheetName, startRow = 1, useFFUrl = false) {
 // Data mulai baris 2 (setelah header)
 async function loadFP() {
   try {
-    const rows = await fetchSheet(CONFIG.sheetFP, 2, true);  // gunakan urlFF untuk FF Pending
+    const rows = await fetchSheet(CONFIG.sheetFP, 2);  // Ambil dari sheet FF Pending di spreadsheet yang sama
     DATA.fp = rows
       .filter(r => r[0] && String(r[0]).trim() !== '')  // skip baris kosong
       .map(r => ({
