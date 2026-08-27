@@ -1529,9 +1529,9 @@ async function loadFPData() {
           sla:         (r[3] !== '' && r[3] != null) ? String(r[3]) : '',
           picSE:       String(r[4] || '').trim(),
           booking:     String(r[5] || '').trim(),
-          feedback:    String(r[6] || '').trim(),  // KOLOM G = index 6
-          remark:      String(r[7] || '').trim(),  // KOLOM H = index 7
-          status:      String(r[8] || '').trim()   // jika ada kolom status di I
+          feedback:    String(r[6] || '').trim(),  // KOLOM G = Feedback SMT
+          remark:      String(r[7] || '').trim(),  // KOLOM H = Remark
+          status:      ''  // Tidak ada kolom status di spreadsheet
         };
       })
       .filter(r => r.receipt);
