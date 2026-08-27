@@ -1105,11 +1105,17 @@
     <div class="card">
       <div class="card-title">⚙ Pengaturan</div>
       <div class="config-note">
-        📋 Masukkan URL Apps Script yang sama dengan yang dipakai di dashboard desktop. Pengaturan disimpan di perangkat ini.
+        📋 Masukkan 2 URL Apps Script berbeda untuk 2 spreadsheet yang berbeda. Pengaturan disimpan di perangkat ini.
       </div>
       <div class="form-group">
-        <label class="form-label">URL Apps Script</label>
-        <input class="form-input" id="m-cfg-url" type="text" placeholder="https://script.google.com/macros/s/...">
+        <label class="form-label">URL Apps Script - Kirim XPDC & RT HUB <span class="required">*</span></label>
+        <input class="form-input" id="m-cfg-url-kirim" type="text" placeholder="https://script.google.com/macros/s/... (Spreadsheet 1Or1lZ...)">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Untuk spreadsheet: 1Or1lZ77abNvK9Ea6ZsBPdV8r8lOdYyQhuR1M0wNv6zE</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">URL Apps Script - FF Pending <span class="required">*</span></label>
+        <input class="form-input" id="m-cfg-url-ff" type="text" placeholder="https://script.google.com/macros/s/... (Spreadsheet 153_c...)">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Untuk spreadsheet: 153_cTlPFgISUUZftuwnopAckoVUVnZLH8Fm-niA3S68</div>
       </div>
       <div class="form-group">
         <label class="form-label">Nama Sheet XPDC</label>
@@ -1120,8 +1126,8 @@
         <input class="form-input" id="m-cfg-rthub" type="text" value="Kirim RT HUB" placeholder="Kirim RT HUB">
       </div>
       <div class="form-group">
-        <label class="form-label">Nama Sheet Fulfillment</label>
-        <input class="form-input" id="m-cfg-fp" type="text" value="Fulfillment Pending" placeholder="Fulfillment Pending">
+        <label class="form-label">Nama Sheet FF Pending</label>
+        <input class="form-input" id="m-cfg-fp" type="text" value="FF Pending" placeholder="FF Pending">
       </div>
       <button class="btn-submit" onclick="saveConfigMobile()">💾 Simpan</button>
     </div>
@@ -1272,18 +1278,22 @@
 
 <script>
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
-// ── KONFIGURASI — isi URL Apps Script kamu di sini ──────────────────────────
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_AsHCq5r_wdTTSMVpH6lMpM07Z6feIl8T75AyGgQVnBeAdc0_Mstvw2x2HpOlVVoFlQ/exec';
+// ── KONFIGURASI — 2 Spreadsheet Berbeda ──────────────────────────────────────
 
-// URL Apps Script BARU untuk sync ke spreadsheet target (153_c...)
-const APPS_SCRIPT_URL_NEW = 'https://script.google.com/macros/s/AKfycbz_AsHCq5r_wdTTSMVpH6lMpM07Z6feIl8T75AyGgQVnBeAdc0_Mstvw2x2HpOlVVoFlQ/exec';
+// Spreadsheet 1: untuk Kirim XPDC & Kirim RT HUB (1Or1lZ...)
+const APPS_SCRIPT_URL_KIRIM = 'https://script.google.com/macros/s/GANTI_DENGAN_URL_APPS_SCRIPT_SPREADSHEET_1Or1lZ/exec';
+
+// Spreadsheet 2: untuk FF Pending (153_c...)
+const APPS_SCRIPT_URL_FF = 'https://script.google.com/macros/s/AKfycbzsWO49XBH2RAw3JZOTDtdkjUvXsc0m3BT4o3V474msiOzJwmXRRnyDtlIjTz1lt1ISZw/exec';
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 let CFG = {
-  url:   APPS_SCRIPT_URL,
-  xpdc:  'Kirim XPDC',
-  rthub: 'Kirim RT HUB',
-  fp:    'FF Pending'  // ← GANTI dari 'Fulfillment Pending' ke 'FF Pending'
+  urlKirim: APPS_SCRIPT_URL_KIRIM,  // untuk XPDC & RT HUB
+  urlFF:    APPS_SCRIPT_URL_FF,     // untuk FF Pending
+  xpdc:     'Kirim XPDC',
+  rthub:    'Kirim RT HUB',
+  fp:       'FF Pending'
 };
 
 // ─── STORAGE WRAPPER (localStorage + cookie fallback) ────────────────────────
@@ -1315,18 +1325,22 @@ function storageGet(key) {
 // Fetch ke Apps Script URL bekerja normal karena Apps Script return JSON
 // dengan Content-Type yang benar, dan browser tidak blokir cross-origin JSON GET.
 
-function checkURL() {
-  if (!CFG.url) throw new Error('URL Apps Script belum diisi.\nBuka tab ⚙ Setting dan isi URL terlebih dahulu.');
+function checkURL(type = 'kirim') {
+  const url = type === 'ff' ? CFG.urlFF : CFG.urlKirim;
+  if (!url || url.includes('GANTI_DENGAN')) {
+    throw new Error('URL Apps Script belum diisi.\nBuka tab ⚙ Setting dan isi URL terlebih dahulu.');
+  }
+  return url;
 }
 
 // XHR GET — sama seperti XHR POST, bypass CORS preflight dari GitHub Pages
-function apiFetch(action, params) {
-  checkURL();
+function apiFetch(action, params, type = 'ff') {
+  const url = checkURL(type);
   return new Promise((resolve, reject) => {
     const qs  = Object.entries(params).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-    const url = `${CFG.url}?action=${action}${qs ? '&'+qs : ''}`;
+    const fullUrl = `${url}?action=${action}${qs ? '&'+qs : ''}`;
     const xhr = new XMLHttpRequest();
-    xhr.open('GET', url, true);
+    xhr.open('GET', fullUrl, true);
     xhr.timeout = 30000;
     xhr.onload = function() {
       try {
@@ -1344,13 +1358,13 @@ function apiFetch(action, params) {
   });
 }
 
-function apiPost(body) {
-  checkURL();
+function apiPost(body, type = 'kirim') {
+  const url = checkURL(type);
   return new Promise((resolve, reject) => {
     // Gunakan XMLHttpRequest dengan Content-Type text/plain
     // untuk bypass CORS preflight — Apps Script menerima format ini
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', CFG.url, true);
+    xhr.open('POST', url, true);
     xhr.setRequestHeader('Content-Type', 'text/plain');
     xhr.timeout = 30000;
     xhr.onload = function() {
@@ -1379,10 +1393,11 @@ let CURRENT_FEEDBACK = ''; // nilai feedback yang dipilih
 window.onload = () => {
   const s = storageGet('logistik_mobile_cfg');
   if (s) { try { CFG = { ...CFG, ...JSON.parse(s) }; } catch(e){} }
-  document.getElementById('m-cfg-url').value   = CFG.url;
-  document.getElementById('m-cfg-xpdc').value  = CFG.xpdc;
-  document.getElementById('m-cfg-rthub').value = CFG.rthub;
-  document.getElementById('m-cfg-fp').value    = CFG.fp;
+  document.getElementById('m-cfg-url-kirim').value = CFG.urlKirim;
+  document.getElementById('m-cfg-url-ff').value    = CFG.urlFF;
+  document.getElementById('m-cfg-xpdc').value      = CFG.xpdc;
+  document.getElementById('m-cfg-rthub').value     = CFG.rthub;
+  document.getElementById('m-cfg-fp').value        = CFG.fp;
 
   // Set today as default date untuk form XPDC & RT HUB
   const today = new Date().toISOString().split('T')[0];
@@ -1471,10 +1486,11 @@ async function loadSholatMagelang() {
 }
 
 function saveConfigMobile() {
-  CFG.url  = document.getElementById('m-cfg-url').value.trim();
-  CFG.xpdc = document.getElementById('m-cfg-xpdc').value.trim();
-  CFG.rthub= document.getElementById('m-cfg-rthub').value.trim();
-  CFG.fp   = document.getElementById('m-cfg-fp').value.trim();
+  CFG.urlKirim = document.getElementById('m-cfg-url-kirim').value.trim();
+  CFG.urlFF    = document.getElementById('m-cfg-url-ff').value.trim();
+  CFG.xpdc     = document.getElementById('m-cfg-xpdc').value.trim();
+  CFG.rthub    = document.getElementById('m-cfg-rthub').value.trim();
+  CFG.fp       = document.getElementById('m-cfg-fp').value.trim();
   storageSave('logistik_mobile_cfg', JSON.stringify(CFG));
   alert('✅ Pengaturan tersimpan!');
 }
@@ -1506,13 +1522,13 @@ function validate(fields) {
 // ─── SUBMIT ───────────────────────────────────────────────────────────────────
 // ─── FULFILLMENT — LOAD & RENDER ─────────────────────────────────────────────
 async function loadFPData() {
-  if (!CFG.url) {
-    showFPError('URL Apps Script belum diisi. Silakan isi di tab ⚙ Setting.');
+  if (!CFG.urlFF || CFG.urlFF.includes('GANTI_DENGAN')) {
+    showFPError('URL Apps Script untuk FF Pending belum diisi. Silakan isi di tab ⚙ Setting.');
     return;
   }
   showFPLoading();
   try {
-    const data = await apiFetch('read', { sheet: CFG.fp, startRow: 3 });
+    const data = await apiFetch('read', { sheet: CFG.fp, startRow: 3 }, 'ff');
     // data.rows sudah difilter server-side (hanya baris dengan receipt)
 
     // Map rows → objects, filter:
@@ -1759,9 +1775,9 @@ async function submitFeedback() {
     return;
   }
 
-  // Cek URL spreadsheet BARU sudah diisi
-  if (!APPS_SCRIPT_URL_NEW || APPS_SCRIPT_URL_NEW === 'GANTI_DENGAN_URL_DEPLOYMENT_BARU') {
-    alert('⚠ URL Apps Script baru belum diisi. Deploy script terlebih dahulu.');
+  // Cek URL FF sudah diisi
+  if (!CFG.urlFF || CFG.urlFF.includes('GANTI_DENGAN')) {
+    alert('⚠ URL Apps Script untuk FF Pending belum diisi. Deploy script terlebih dahulu.');
     return;
   }
 
@@ -1770,19 +1786,13 @@ async function submitFeedback() {
     const remark = document.getElementById('fb-remark').value.trim();
     const receipt = CURRENT_ROW.receipt;
 
-    // Kirim langsung ke spreadsheet BARU (153_c...)
-    const response = await fetch(APPS_SCRIPT_URL_NEW, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({
-        action: 'updateFeedback',
-        receipt: receipt,
-        feedback: CURRENT_FEEDBACK,
-        remark: remark
-      })
-    });
-
-    const result = await response.json();
+    // Kirim ke spreadsheet FF (153_c...)
+    const result = await apiPost({
+      action: 'updateFeedback',
+      receipt: receipt,
+      feedback: CURRENT_FEEDBACK,
+      remark: remark
+    }, 'ff');
     
     if (!result.ok) {
       throw new Error(result.message || 'Gagal menyimpan feedback');
@@ -1939,7 +1949,7 @@ async function uploadFoto(prefix) {
       sheet, receipt, customer,
       imageBase64: base64,
       mimeType
-    });
+    }, 'kirim');
     if (!result.ok) throw new Error(result.message);
     FOTO_URL[prefix] = result.url;
     status.textContent = '✅ Foto berhasil diupload';
@@ -2044,13 +2054,13 @@ async function submitShip(prefix) {
 }
 
 async function submitRow(sheet, row, prefix) {
-  if (!CFG.url) {
-    alert('⚠ URL Apps Script belum diisi. Buka tab ⚙ Setting dan isi URL terlebih dahulu.');
+  if (!CFG.urlKirim || CFG.urlKirim.includes('GANTI_DENGAN')) {
+    alert('⚠ URL Apps Script untuk Kirim belum diisi. Buka tab ⚙ Setting dan isi URL terlebih dahulu.');
     return;
   }
 
   try {
-    const data = await apiPost({ action: 'write', sheet, row });
+    const data = await apiPost({ action: 'write', sheet, row }, 'kirim');
     if (data.ok) {
       showSuccess(prefix);
     } else {
@@ -2687,9 +2697,9 @@ function submitInstFeedback() {
     tglReschedule = `${d}/${m}/${y}`;
   }
 
-  const GAS_URL = CFG.url || '';
-  if (!GAS_URL) {
-    console.warn('URL Apps Script belum dikonfigurasi, sinkronisasi dilewati');
+  const GAS_URL = CFG.urlKirim || '';
+  if (!GAS_URL || GAS_URL.includes('GANTI_DENGAN')) {
+    console.warn('URL Apps Script Kirim belum dikonfigurasi, sinkronisasi dilewati');
     return;
   }
 
@@ -2699,7 +2709,7 @@ function submitInstFeedback() {
     feedbackStore:     feedbackStore,
     tanggalReschedule: tglReschedule,
     namaSmt:           smt.toUpperCase(),
-  }).catch(err => console.warn('Sinkronisasi instalasi gagal:', err));
+  }, 'kirim').catch(err => console.warn('Sinkronisasi instalasi gagal:', err));
 }
 
 // Update switchTab untuk load instalasi
