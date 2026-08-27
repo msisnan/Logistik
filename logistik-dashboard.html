@@ -621,16 +621,18 @@
         <div class="config-title">🔗 Google Apps Script Web App URL</div>
         <div class="config-grid">
           <div class="config-field" style="grid-column:1/-1">
-            <span class="config-label">URL Apps Script (untuk semua sheet)</span>
+            <span class="config-label">URL Apps Script — Spreadsheet 1 (XPDC, RT HUB, Jalur, RDO, Instalasi)</span>
             <input class="config-input" id="cfg-url" type="text" placeholder="https://script.google.com/macros/s/AKfycb.../exec">
+            <div style="font-size:10px;color:var(--text3);margin-top:4px;">Spreadsheet ID: 1Or1lZ77abNvK9Ea6ZsBPdV8r8lOdYyQhuR1M0wNv6zE</div>
+          </div>
+          <div class="config-field" style="grid-column:1/-1">
+            <span class="config-label">URL Apps Script — Spreadsheet 2 (FF Pending)</span>
+            <input class="config-input" id="cfg-url-ff" type="text" placeholder="https://script.google.com/macros/s/AKfycb.../exec">
+            <div style="font-size:10px;color:var(--text3);margin-top:4px;">Spreadsheet ID: 153_cTlPFgISUUZftuwnopAckoVUVnZLH8Fm-niA3S68</div>
           </div>
           <div class="config-field">
-            <span class="config-label">ID Spreadsheet</span>
-            <input class="config-input" id="cfg-sheet-id" type="text" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms">
-          </div>
-          <div class="config-field">
-            <span class="config-label">Nama Sheet — Fulfillment Pending</span>
-            <input class="config-input" id="cfg-sheet-fp" type="text" value="Fulfillment Pending" placeholder="Fulfillment Pending">
+            <span class="config-label">Nama Sheet — FF Pending</span>
+            <input class="config-input" id="cfg-sheet-fp" type="text" value="FF Pending" placeholder="FF Pending">
           </div>
           <div class="config-field">
             <span class="config-label">Nama Sheet — XPDC</span>
@@ -841,9 +843,10 @@
 <script>
 // ─── CONFIG ─────────────────────────────────────────────────────────────────
 let CONFIG = {
-  url: '',
+  url: '',        // URL Apps Script untuk Spreadsheet 1 (XPDC, RT HUB, Jalur, RDO, Instalasi)
+  urlFF: '',      // URL Apps Script untuk Spreadsheet 2 (FF Pending)
   sheetId: '',
-  sheetFP: 'Fulfillment Pending',
+  sheetFP: 'FF Pending',
   sheetXPDC: 'Kirim XPDC',
   sheetRTHUB: 'Kirim RT HUB',
   email: ''
@@ -879,7 +882,7 @@ function loadConfig() {
   const saved = localStorage.getItem('logistik_config');
   if (saved) CONFIG = { ...CONFIG, ...JSON.parse(saved) };
   document.getElementById('cfg-url').value = CONFIG.url || '';
-  document.getElementById('cfg-sheet-id').value = CONFIG.sheetId || '';
+  document.getElementById('cfg-url-ff').value = CONFIG.urlFF || '';
   document.getElementById('cfg-sheet-fp').value = CONFIG.sheetFP || '';
   document.getElementById('cfg-sheet-xpdc').value = CONFIG.sheetXPDC || '';
   document.getElementById('cfg-sheet-rthub').value = CONFIG.sheetRTHUB || '';
@@ -888,7 +891,7 @@ function loadConfig() {
 
 function saveConfig() {
   CONFIG.url = document.getElementById('cfg-url').value.trim();
-  CONFIG.sheetId = document.getElementById('cfg-sheet-id').value.trim();
+  CONFIG.urlFF = document.getElementById('cfg-url-ff').value.trim();
   CONFIG.sheetFP = document.getElementById('cfg-sheet-fp').value.trim();
   CONFIG.sheetXPDC = document.getElementById('cfg-sheet-xpdc').value.trim();
   CONFIG.sheetRTHUB = document.getElementById('cfg-sheet-rthub').value.trim();
@@ -959,20 +962,21 @@ function xhrGet(url) {
   });
 }
 
-async function fetchSheet(sheetName, startRow = 1) {
-  if (!CONFIG.url) throw new Error('URL belum dikonfigurasi. Klik ⚙ Konfigurasi dan isi URL Apps Script.');
-  const url = `${CONFIG.url}?action=read&sheet=${encodeURIComponent(sheetName)}&startRow=${startRow}`;
-  const data = await xhrGet(url);
+async function fetchSheet(sheetName, startRow = 1, useFFUrl = false) {
+  const url = useFFUrl ? CONFIG.urlFF : CONFIG.url;
+  if (!url) throw new Error('URL belum dikonfigurasi. Klik ⚙ Konfigurasi dan isi URL Apps Script.');
+  const fullUrl = `${url}?action=read&sheet=${encodeURIComponent(sheetName)}&startRow=${startRow}`;
+  const data = await xhrGet(fullUrl);
   if (!data.ok) throw new Error(data.message || 'Error dari server');
   return data.rows;
 }
 
 // FULFILLMENT PENDING
-// Kolom: A=Receipt | B=Customer Name | C=Request Date | D=SLA | E=PIC SE | F=Booking | G=Status | H=Feedback PIC SE
-// Data mulai baris 3
+// Kolom: A=Receipt | B=Customer Name | C=Request Date | D=SLA | E=PIC SMT | F=Booking | G=Feedback SMT | H=Remark
+// Data mulai baris 2 (setelah header)
 async function loadFP() {
   try {
-    const rows = await fetchSheet(CONFIG.sheetFP, 3);
+    const rows = await fetchSheet(CONFIG.sheetFP, 2, true);  // gunakan urlFF untuk FF Pending
     DATA.fp = rows
       .filter(r => r[0] && String(r[0]).trim() !== '')  // skip baris kosong
       .map(r => ({
@@ -982,8 +986,8 @@ async function loadFP() {
         sla:         (r[3] !== '' && r[3] !== null && r[3] !== undefined) ? String(r[3]) : '',
         picSE:       String(r[4] || '').trim(),
         booking:     String(r[5] || '').trim(),
-        status:      String(r[6] || '').trim(),
-        feedback:    String(r[7] || '').trim()
+        status:      String(r[6] || '').trim(),  // Feedback SMT
+        feedback:    String(r[7] || '').trim()   // Remark
       }));
   } catch(e) {
     DATA.fp = getDemoFP();
