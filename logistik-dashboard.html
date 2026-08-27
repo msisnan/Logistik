@@ -903,13 +903,40 @@ function saveConfig() {
 function showConfig() { showPage('config'); }
 
 async function testConnection() {
-  if (!CONFIG.url) { notify('⚠ URL belum diisi', 'error'); return; }
-  try {
-    const d = await xhrGet(`${CONFIG.url}?action=ping`);
-    notify(d.ok ? '✅ Koneksi berhasil!' : '❌ ' + d.message, d.ok ? 'success' : 'error');
-  } catch(e) {
-    notify('❌ ' + e.message, 'error');
+  if (!CONFIG.url && !CONFIG.urlFF) { 
+    notify('⚠ URL belum diisi', 'error'); 
+    return; 
   }
+  
+  let results = [];
+  
+  // Test Spreadsheet 1 (XPDC, RT HUB, Jalur, RDO, Instalasi)
+  if (CONFIG.url) {
+    try {
+      const d = await xhrGet(`${CONFIG.url}?action=read&sheet=Kirim%20XPDC&startRow=1`);
+      results.push('✅ Spreadsheet 1 (XPDC/RT HUB): OK');
+    } catch(e) {
+      results.push('❌ Spreadsheet 1: ' + e.message);
+    }
+  }
+  
+  // Test Spreadsheet 2 (FF Pending)
+  if (CONFIG.urlFF) {
+    try {
+      const d = await xhrGet(`${CONFIG.urlFF}?action=testConnection`);
+      if (d.ok) {
+        results.push('✅ Spreadsheet 2 (FF Pending): OK');
+      } else {
+        results.push('❌ Spreadsheet 2: ' + d.message);
+      }
+    } catch(e) {
+      results.push('❌ Spreadsheet 2: ' + e.message);
+    }
+  }
+  
+  // Tampilkan hasil
+  const allOk = results.every(r => r.startsWith('✅'));
+  notify(results.join('\n'), allOk ? 'success' : 'error');
 }
 
 // ─── NAVIGATION ──────────────────────────────────────────────────────────────
